@@ -28,6 +28,8 @@ interface AuthCtx {
   login: (email: string, password: string) => Promise<void>;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string, currentPassword: string, newPassword: string) => Promise<void>;
+  verifyCredentials: (email: string, password: string) => Promise<boolean>;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -40,18 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function checkAuth() {
     const token = localStorage.getItem("token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) { setLoading(false); return; }
 
     try {
-      const data = await api.get<{
-        user: User;
-        profile: Profile;
-        roles: AppRole[];
-      }>("/auth/me");
-
+      const data = await api.get<{ user: User; profile: Profile; roles: AppRole[] }>("/auth/me");
       setUser(data.user);
       setProfile(data.profile);
       setRoles(data.roles);
@@ -66,9 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  useEffect(() => { checkAuth(); }, []);
 
   async function login(email: string, password: string) {
     const data = await api.post<{
@@ -91,19 +83,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   }
 
+  async function verifyCredentials(email: string, password: string): Promise<boolean> {
+    try {
+      // Call login endpoint but do NOT store the token or set auth state
+      await api.post("/auth/login", { email, password });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function resetPassword(email: string, currentPassword: string, newPassword: string) {
+    await api.post("/auth/reset-password", { email, currentPassword, newPassword });
+  }
+
   return (
     <Ctx.Provider
       value={{
-        user,
-        profile,
-        roles,
-        loading,
+        user, profile, roles, loading,
         isAdmin: roles.includes("admin"),
         isManager: roles.includes("manager"),
         isEmployee: roles.includes("employee"),
         login,
         refresh: checkAuth,
         signOut,
+        resetPassword,
+        verifyCredentials,
       }}
     >
       {children}

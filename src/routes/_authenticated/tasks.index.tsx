@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -21,7 +22,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Send, Loader2 } from "lucide-react";
 import { format, isBefore } from "date-fns";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/tasks/")({
   component: TaskListPage,
@@ -101,7 +101,7 @@ function TaskModal({
     status: task.status,
     priority: task.priority,
     due_date: task.due_date ? task.due_date.slice(0, 10) : "",
-    assigned_to: task.assigned_to ?? "",
+    assigned_to: task.assigned_to ?? "unassigned",
   });
 
   const commentsQ = useQuery({
@@ -144,7 +144,7 @@ function TaskModal({
         ...form,
         description: form.description || null,
         due_date: form.due_date || null,
-        assigned_to: form.assigned_to || null,
+        assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
       });
     } finally {
       setSaving(false);
@@ -243,7 +243,7 @@ function TaskModal({
                   >
                     <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {(profilesQ.data ?? []).map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.full_name || p.email}

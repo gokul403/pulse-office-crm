@@ -6,6 +6,10 @@ import {
   Settings,
   Briefcase,
   UserCircle,
+  Target,
+  UserSquare2,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -21,24 +25,29 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 
-const baseItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Tasks", url: "/tasks", icon: CheckSquare },
-];
-
-const adminItems = [
-  { title: "Team", url: "/team", icon: Users },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
 export function AppSidebar() {
   const { profile, roles, isAdmin, isManager } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (p: string) => pathname === p || pathname.startsWith(p + "/");
 
-  const items = [...baseItems];
-  if (isAdmin || isManager) items.push({ title: "Team", url: "/team", icon: Users });
-  if (isAdmin) items.push({ title: "Settings", url: "/settings", icon: Settings });
+  const workspace = [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Tasks", url: "/tasks", icon: CheckSquare },
+  ];
+  const crm = [
+    { title: "Leads / Enquiries", url: "/leads", icon: Target },
+    { title: "Customers", url: "/customers", icon: UserSquare2 },
+  ];
+  const finance =
+    isAdmin || isManager
+      ? [
+          { title: "Income", url: "/income", icon: TrendingUp },
+          { title: "Expenses", url: "/expenses", icon: TrendingDown },
+        ]
+      : [];
+  const admin: { title: string; url: string; icon: typeof Users }[] = [];
+  if (isAdmin || isManager) admin.push({ title: "Team", url: "/team", icon: Users });
+  if (isAdmin) admin.push({ title: "Settings", url: "/settings", icon: Settings });
 
   return (
     <Sidebar collapsible="icon">
@@ -56,23 +65,30 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {[
+          { label: "Workspace", items: workspace },
+          { label: "CRM", items: crm },
+          ...(finance.length ? [{ label: "Finance", items: finance }] : []),
+          ...(admin.length ? [{ label: "Admin", items: admin }] : []),
+        ].map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center gap-2 rounded-md px-2 py-2 text-sm group-data-[collapsible=icon]:justify-center">

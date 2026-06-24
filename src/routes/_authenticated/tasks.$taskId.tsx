@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,41 +27,27 @@ function TaskDetailPage() {
   const taskQ = useQuery({
     queryKey: ["task", taskId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("id", taskId)
-        .single();
-      if (error) throw error;
-      return data;
+      return api.get<any>(`/tasks/${taskId}`);
     },
   });
 
   const peopleQ = useQuery({
     queryKey: ["profiles-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, email");
-      return data ?? [];
+      return api.get<any[]>("/profiles");
     },
   });
 
   const commentsQ = useQuery({
     queryKey: ["task-comments", taskId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("task_comments")
-        .select("id, content, user_id, created_at")
-        .eq("task_id", taskId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      return api.get<any[]>(`/tasks/${taskId}/comments`);
     },
   });
 
   const updateField = useMutation({
     mutationFn: async (patch: any) => {
-      const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
-      if (error) throw error;
+      await api.put(`/tasks/${taskId}`, patch);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["task", taskId] });
@@ -74,12 +60,9 @@ function TaskDetailPage() {
   const addComment = useMutation({
     mutationFn: async () => {
       if (!user) return;
-      const { error } = await supabase.from("task_comments").insert({
-        task_id: taskId,
-        user_id: user.id,
+      await api.post(`/tasks/${taskId}/comments`, {
         content: comment,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       setComment("");
@@ -90,8 +73,7 @@ function TaskDetailPage() {
 
   const deleteTask = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
-      if (error) throw error;
+      await api.delete(`/tasks/${taskId}`);
     },
     onSuccess: () => {
       toast.success("Task deleted");

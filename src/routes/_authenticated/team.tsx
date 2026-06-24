@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +11,6 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { updateUserRole, setUserActive } from "@/lib/admin.functions";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -31,20 +29,15 @@ type Profile = {
 function TeamPage() {
   const { isAdmin, isManager } = useAuth();
   const qc = useQueryClient();
-  const updateRole = useServerFn(updateUserRole);
-  const setActive = useServerFn(setUserActive);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const dataQ = useQuery({
     queryKey: ["team"],
     queryFn: async () => {
-      const [{ data: profiles }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("id,email,full_name,job_title,is_active"),
-        supabase.from("user_roles").select("user_id, role"),
-      ]);
+      const res = await api.get<{ profiles: Profile[]; roles: { user_id: string; role: string }[] }>("/team");
       const roleMap = new Map<string, string>();
-      (roles ?? []).forEach((r: any) => roleMap.set(r.user_id, r.role));
-      return { profiles: (profiles ?? []) as Profile[], roleMap };
+      (res.roles ?? []).forEach((r: any) => roleMap.set(r.user_id, r.role));
+      return { profiles: res.profiles, roleMap };
     },
   });
 
@@ -89,7 +82,7 @@ function TeamPage() {
                           onValueChange={async (v) => {
                             setBusyId(p.id);
                             try {
-                              await updateRole({ data: { userId: p.id, role: v as any } });
+                              await api.post("/team/role", { userId: p.id, role: v });
                               qc.invalidateQueries({ queryKey: ["team"] });
                               toast.success("Role updated");
                             } catch (e: any) {
@@ -124,7 +117,7 @@ function TeamPage() {
                           onClick={async () => {
                             setBusyId(p.id);
                             try {
-                              await setActive({ data: { userId: p.id, active: !p.is_active } });
+                              await api.post("/team/active", { userId: p.id, active: !p.is_active });
                               qc.invalidateQueries({ queryKey: ["team"] });
                               toast.success(p.is_active ? "User disabled" : "User activated");
                             } catch (e: any) {

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,12 +55,7 @@ function CustomersPage() {
   const custQ = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("id,name,email,phone,company,address,status,notes,assigned_to,created_at")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Customer[];
+      return api.get<Customer[]>("/customers");
     },
     enabled: !!user,
   });
@@ -68,8 +63,7 @@ function CustomersPage() {
   const profilesQ = useQuery({
     queryKey: ["profiles-map"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, email, is_active");
-      return data ?? [];
+      return api.get<any[]>("/profiles");
     },
   });
   const profilesMap = useMemo(() => {
@@ -80,8 +74,7 @@ function CustomersPage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("customers").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/customers/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["customers"] });
@@ -225,22 +218,24 @@ function CustomerFormDialog({ profiles, onDone }: { profiles: any[]; onDone: () 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customers").insert({
-      name: form.name.trim(),
-      email: form.email || null,
-      phone: form.phone || null,
-      company: form.company || null,
-      address: form.address || null,
-      status: form.status,
-      notes: form.notes || null,
-      assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
-      created_by: u.user?.id ?? null,
-    });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    toast.success("Customer added");
-    onDone();
+    try {
+      await api.post("/customers", {
+        name: form.name.trim(),
+        email: form.email || null,
+        phone: form.phone || null,
+        company: form.company || null,
+        address: form.address || null,
+        status: form.status,
+        notes: form.notes || null,
+        assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
+      });
+      toast.success("Customer added");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not add customer");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -316,13 +311,7 @@ function InteractionsDialog({ customer, onClose }: { customer: Customer; onClose
   const q = useQuery({
     queryKey: ["interactions", customer.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customer_interactions")
-        .select("id,type,summary,created_at,created_by")
-        .eq("customer_id", customer.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      return api.get<any[]>(`/customers/${customer.id}/interactions`);
     },
   });
 
@@ -330,18 +319,19 @@ function InteractionsDialog({ customer, onClose }: { customer: Customer; onClose
     e.preventDefault();
     if (!summary.trim()) return;
     setSubmitting(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_interactions").insert({
-      customer_id: customer.id,
-      type,
-      summary: summary.trim(),
-      created_by: u.user?.id ?? null,
-    });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    setSummary("");
-    qc.invalidateQueries({ queryKey: ["interactions", customer.id] });
-    toast.success("Interaction logged");
+    try {
+      await api.post(`/customers/${customer.id}/interactions`, {
+        type,
+        summary: summary.trim(),
+      });
+      setSummary("");
+      qc.invalidateQueries({ queryKey: ["interactions", customer.id] });
+      toast.success("Interaction logged");
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not log interaction");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

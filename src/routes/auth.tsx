@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Loader2, Briefcase, Copy } from "lucide-react";
@@ -23,7 +22,7 @@ const DEMO_ACCOUNTS = [
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -34,8 +33,7 @@ function AuthPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      await login(email, password);
       toast.success("Welcome back");
       navigate({ to: "/dashboard" });
     } catch (err: any) {
@@ -72,9 +70,9 @@ function AuthPage() {
       <div className="flex items-center justify-center px-6 py-12">
         <Card className="w-full max-w-md border-border/60">
           <CardHeader>
-            <CardTitle className="text-2xl">Sign in</CardTitle>
+            <CardTitle className="text-3xl">Sign in</CardTitle>
             <CardDescription>
-              Use one of the demo accounts below. Click a row to autofill.
+              improving productivity and collaboration across the organization.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -108,10 +106,10 @@ function AuthPage() {
             </form>
 
             <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 p-3">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {/* <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Demo accounts
-              </p>
-              <ul className="space-y-1">
+              </p> */}
+              {/* <ul className="space-y-1">
                 {DEMO_ACCOUNTS.map((a) => (
                   <li key={a.email}>
                     <button
@@ -127,12 +125,12 @@ function AuthPage() {
                     </button>
                   </li>
                 ))}
-              </ul>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              </ul> */}
+              {/* <p className="mt-2 text-[11px] text-muted-foreground">
                 Admin: <span className="font-mono">Admin1234!</span> · Manager:{" "}
                 <span className="font-mono">Manager1234!</span> · Employees:{" "}
                 <span className="font-mono">Employee1234!</span>
-              </p>
+              </p> */}
             </div>
           </CardContent>
         </Card>

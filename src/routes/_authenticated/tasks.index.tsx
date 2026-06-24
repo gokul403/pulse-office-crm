@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,12 +74,7 @@ function TaskListPage() {
   const tasksQ = useQuery({
     queryKey: ["tasks", user?.id, isAdmin, isManager],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("id,title,description,status,priority,due_date,assigned_to,created_at")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Task[];
+      return api.get<Task[]>("/tasks");
     },
     enabled: !!user,
   });
@@ -87,7 +82,7 @@ function TaskListPage() {
   const profilesQ = useQuery({
     queryKey: ["profiles-map"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, email");
+      const data = await api.get<any[]>("/profiles");
       const map = new Map<string, string>();
       (data ?? []).forEach((p: any) => map.set(p.id, p.full_name || p.email));
       return map;
@@ -96,10 +91,7 @@ function TaskListPage() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Task["status"] }) => {
-      const patch: any = { status };
-      if (status === "completed") patch.completed_at = new Date().toISOString();
-      const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-      if (error) throw error;
+      await api.put(`/tasks/${id}`, { status });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });

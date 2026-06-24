@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   CheckSquare,
@@ -66,11 +66,7 @@ function DashboardPage() {
   const tasksQ = useQuery({
     queryKey: ["dashboard-tasks", user?.id, isAdmin, isManager],
     queryFn: async () => {
-      let q = supabase.from("tasks").select("id,title,status,priority,due_date,assigned_to,created_at");
-      if (!isAdmin && !isManager) q = q.eq("assigned_to", user!.id);
-      const { data, error } = await q.order("due_date", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as TaskRow[];
+      return api.get<TaskRow[]>("/tasks");
     },
     enabled: !!user,
   });
@@ -78,9 +74,7 @@ function DashboardPage() {
   const teamQ = useQuery({
     queryKey: ["dashboard-team"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id,is_active");
-      const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-      return { profiles: data ?? [], roles: roles ?? [] };
+      return api.get<{ profiles: any[]; roles: any[] }>("/team");
     },
     enabled: isAdmin || isManager,
   });

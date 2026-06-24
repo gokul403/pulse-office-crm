@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,12 +65,7 @@ function LeadsPage() {
   const leadsQ = useQuery({
     queryKey: ["leads"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("id,name,email,phone,company,source,status,notes,assigned_to,created_at")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Lead[];
+      return api.get<Lead[]>("/leads");
     },
     enabled: !!user,
   });
@@ -78,8 +73,7 @@ function LeadsPage() {
   const profilesQ = useQuery({
     queryKey: ["profiles-map"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, email, is_active");
-      return data ?? [];
+      return api.get<any[]>("/profiles");
     },
   });
 
@@ -91,8 +85,7 @@ function LeadsPage() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: LeadStatus }) => {
-      const { error } = await supabase.from("leads").update({ status }).eq("id", id);
-      if (error) throw error;
+      await api.put(`/leads/${id}`, { status });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
@@ -103,8 +96,7 @@ function LeadsPage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("leads").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/leads/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
@@ -275,22 +267,24 @@ function LeadFormDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("leads").insert({
-      name: form.name.trim(),
-      email: form.email || null,
-      phone: form.phone || null,
-      company: form.company || null,
-      source: form.source || null,
-      notes: form.notes || null,
-      status: form.status,
-      assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
-      created_by: u.user?.id ?? null,
-    });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    toast.success("Lead created");
-    onDone();
+    try {
+      await api.post("/leads", {
+        name: form.name.trim(),
+        email: form.email || null,
+        phone: form.phone || null,
+        company: form.company || null,
+        source: form.source || null,
+        notes: form.notes || null,
+        status: form.status,
+        assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
+      });
+      toast.success("Lead created");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not create lead");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

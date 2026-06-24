@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,12 +46,7 @@ function IncomePage() {
   const q = useQuery({
     queryKey: ["income"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("income")
-        .select("id,amount,source,category,description,customer_id,received_on,created_at")
-        .order("received_on", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as IncomeRow[];
+      return api.get<IncomeRow[]>("/finance/income");
     },
     enabled: !!user,
   });
@@ -59,8 +54,7 @@ function IncomePage() {
   const custQ = useQuery({
     queryKey: ["customers-min"],
     queryFn: async () => {
-      const { data } = await supabase.from("customers").select("id,name");
-      return data ?? [];
+      return api.get<any[]>("/customers");
     },
   });
   const custMap = useMemo(() => {
@@ -71,8 +65,7 @@ function IncomePage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("income").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/finance/income/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["income"] });
@@ -177,20 +170,22 @@ function IncomeFormDialog({ customers, onDone }: { customers: any[]; onDone: () 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("income").insert({
-      amount: Number(form.amount),
-      source: form.source.trim(),
-      category: form.category || null,
-      description: form.description || null,
-      customer_id: form.customer_id === "none" ? null : form.customer_id,
-      received_on: form.received_on,
-      created_by: u.user?.id ?? null,
-    });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    toast.success("Income recorded");
-    onDone();
+    try {
+      await api.post("/finance/income", {
+        amount: Number(form.amount),
+        source: form.source.trim(),
+        category: form.category || null,
+        description: form.description || null,
+        customer_id: form.customer_id === "none" ? null : form.customer_id,
+        received_on: form.received_on,
+      });
+      toast.success("Income recorded");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not record income");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

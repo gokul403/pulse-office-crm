@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,12 +46,7 @@ function ExpensesPage() {
   const q = useQuery({
     queryKey: ["expenses"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("id,amount,category,vendor,description,spent_on,paid_by,created_at")
-        .order("spent_on", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Expense[];
+      return api.get<Expense[]>("/finance/expenses");
     },
     enabled: !!user,
   });
@@ -59,8 +54,7 @@ function ExpensesPage() {
   const profilesQ = useQuery({
     queryKey: ["profiles-map"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, email, is_active");
-      return data ?? [];
+      return api.get<any[]>("/profiles");
     },
   });
   const profilesMap = useMemo(() => {
@@ -71,8 +65,7 @@ function ExpensesPage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("expenses").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/finance/expenses/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
@@ -177,20 +170,22 @@ function ExpenseFormDialog({ profiles, onDone }: { profiles: any[]; onDone: () =
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("expenses").insert({
-      amount: Number(form.amount),
-      category: form.category.trim(),
-      vendor: form.vendor || null,
-      description: form.description || null,
-      spent_on: form.spent_on,
-      paid_by: form.paid_by === "none" ? null : form.paid_by,
-      created_by: u.user?.id ?? null,
-    });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    toast.success("Expense recorded");
-    onDone();
+    try {
+      await api.post("/finance/expenses", {
+        amount: Number(form.amount),
+        category: form.category.trim(),
+        vendor: form.vendor || null,
+        description: form.description || null,
+        spent_on: form.spent_on,
+        paid_by: form.paid_by === "none" ? null : form.paid_by,
+      });
+      toast.success("Expense recorded");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not record expense");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

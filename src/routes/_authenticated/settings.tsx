@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { seedDemoData } from "@/lib/admin.functions";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 
@@ -14,7 +13,6 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 function SettingsPage() {
   const { isAdmin } = useAuth();
-  const seed = useServerFn(seedDemoData);
   const [running, setRunning] = useState(false);
   const [creds, setCreds] = useState<{ email: string; password: string; role: string }[] | null>(null);
 
@@ -44,7 +42,7 @@ function SettingsPage() {
             onClick={async () => {
               setRunning(true);
               try {
-                const res = await seed();
+                const res = await api.post<any>("/team/seed");
                 setCreds(res.credentials);
                 toast.success("Demo data ready");
               } catch (e: any) {

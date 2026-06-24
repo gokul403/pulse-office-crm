@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,24 +30,22 @@ function NewTaskPage() {
   const peopleQ = useQuery({
     queryKey: ["assignable-people"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, email").eq("is_active", true);
-      return data ?? [];
+      const data = await api.get<any[]>("/profiles");
+      return (data ?? []).filter((p) => p.is_active);
     },
   });
 
   const create = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("tasks").insert({
+      await api.post("/tasks", {
         title,
         description: description || null,
         priority,
         status: "pending",
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         assigned_to: assignedTo || null,
-        created_by: user.id,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Task created");

@@ -59,7 +59,7 @@ function TaskDetailPage() {
   });
 
   const updateField = useMutation({
-    mutationFn: async (patch: Record<string, unknown>) => {
+    mutationFn: async (patch: any) => {
       const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
       if (error) throw error;
     },

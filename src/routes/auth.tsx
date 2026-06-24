@@ -6,19 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2, Briefcase, Copy } from "lucide-react";
+import { Loader2, Briefcase } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
-
-const DEMO_ACCOUNTS = [
-  { role: "Admin", email: "admin@demo.com", password: "Admin1234!" },
-  { role: "Manager", email: "manager@demo.com", password: "Manager1234!" },
-  { role: "Employee 1", email: "employee1@demo.com", password: "Employee1234!" },
-  { role: "Employee 2", email: "employee2@demo.com", password: "Employee1234!" },
-  { role: "Employee 3", email: "employee3@demo.com", password: "Employee1234!" },
-];
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -41,11 +33,6 @@ function AuthPage() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function fill(acc: (typeof DEMO_ACCOUNTS)[number]) {
-    setEmail(acc.email);
-    setPassword(acc.password);
   }
 
   return (
@@ -104,34 +91,6 @@ function AuthPage() {
                 Sign in
               </Button>
             </form>
-
-            <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 p-3">
-              {/* <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Demo accounts
-              </p> */}
-              {/* <ul className="space-y-1">
-                {DEMO_ACCOUNTS.map((a) => (
-                  <li key={a.email}>
-                    <button
-                      type="button"
-                      onClick={() => fill(a)}
-                      className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-accent"
-                    >
-                      <span className="font-medium">{a.role}</span>
-                      <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                        {a.email}
-                        <Copy className="h-3 w-3" />
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul> */}
-              {/* <p className="mt-2 text-[11px] text-muted-foreground">
-                Admin: <span className="font-mono">Admin1234!</span> · Manager:{" "}
-                <span className="font-mono">Manager1234!</span> · Employees:{" "}
-                <span className="font-mono">Employee1234!</span>
-              </p> */}
-            </div>
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,10 @@ import {
   Settings,
   Briefcase,
   UserCircle,
+  Target,
+  UserSquare2,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -21,24 +25,29 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 
-const baseItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Tasks", url: "/tasks", icon: CheckSquare },
-];
-
-const adminItems = [
-  { title: "Team", url: "/team", icon: Users },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
 export function AppSidebar() {
   const { profile, roles, isAdmin, isManager } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (p: string) => pathname === p || pathname.startsWith(p + "/");
 
-  const items = [...baseItems];
-  if (isAdmin || isManager) items.push({ title: "Team", url: "/team", icon: Users });
-  if (isAdmin) items.push({ title: "Settings", url: "/settings", icon: Settings });
+  const workspace = [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Tasks", url: "/tasks", icon: CheckSquare },
+  ];
+  const crm = [
+    { title: "Leads / Enquiries", url: "/leads", icon: Target },
+    { title: "Customers", url: "/customers", icon: UserSquare2 },
+  ];
+  const finance =
+    isAdmin || isManager
+      ? [
+          { title: "Income", url: "/income", icon: TrendingUp },
+          { title: "Expenses", url: "/expenses", icon: TrendingDown },
+        ]
+      : [];
+  const admin: { title: string; url: string; icon: typeof Users }[] = [];
+  if (isAdmin || isManager) admin.push({ title: "Team", url: "/team", icon: Users });
+  if (isAdmin) admin.push({ title: "Settings", url: "/settings", icon: Settings });
 
   return (
     <Sidebar collapsible="icon">

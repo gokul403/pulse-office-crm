@@ -36,7 +36,7 @@ type IncomeRow = {
   created_at: string;
 };
 
-const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "INR" });
 
 function IncomePage() {
   const { user, isAdmin } = useAuth();

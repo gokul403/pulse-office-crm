@@ -36,7 +36,7 @@ type Expense = {
   created_at: string;
 };
 
-const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "INR" });
 
 function ExpensesPage() {
   const { user, isAdmin } = useAuth();

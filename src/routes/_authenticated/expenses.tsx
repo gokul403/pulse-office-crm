@@ -39,10 +39,10 @@ type Expense = {
 const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "INR" });
 
 function ExpensesPage() {
-  const { user, isAdmin, isManager } = useAuth();
+  const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const canCreate = isAdmin || isManager;
+  const canCreate = !!user;
 
   const q = useQuery({
     queryKey: ["expenses"],

@@ -75,7 +75,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "OfficeFlow CRM & Management System" },
+      { title: "Techxcore CRM" },
       { name: "description", content: "Modern office management and CRM with role-based dashboards, tasks, leads, customers, and finance." },
       { property: "og:title", content: "OfficeFlow CRM & Management System" },
       { property: "og:description", content: "Modern office management and CRM with role-based dashboards, tasks, leads, customers, and finance." },

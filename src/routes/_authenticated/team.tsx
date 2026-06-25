@@ -212,7 +212,7 @@ function TeamPage() {
   function openEdit(profile: Profile) {
     if (!isAdmin) return;
     setEditProfile(profile);
-    setEditRole(dataQ.data?.roleMap.get(profile.id) ?? "employee");
+    setEditRole(dataQ.data?.roleMap?.get(profile.id) ?? "employee");
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -260,17 +260,17 @@ function TeamPage() {
     toast.success("Credentials copied");
   }
 
-  if (!isAdmin && !isManager) {
-    return <p className="text-sm text-muted-foreground">No access.</p>;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">
-            {isAdmin ? "Click a row to edit a member's details." : "View your team."}
+            {isAdmin
+              ? "Click a row to edit a member's details."
+              : isManager
+                ? "View your team."
+                : "View all team members."}
           </p>
         </div>
         {isAdmin && (
@@ -295,11 +295,11 @@ function TeamPage() {
             </TableHeader>
             <TableBody>
               {(dataQ.data?.profiles ?? []).map((p) => {
-                const memberRole = dataQ.data?.roleMap.get(p.id) ?? "employee";
+                const memberRole = dataQ.data?.roleMap?.get(p.id) ?? "employee";
                 return (
                   <TableRow
                     key={p.id}
-                    onClick={() => openEdit(p)}
+                    onClick={isAdmin ? () => openEdit(p) : undefined}
                     className={isAdmin ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
                   >
                     <TableCell className="font-medium">{p.full_name ?? "—"}</TableCell>

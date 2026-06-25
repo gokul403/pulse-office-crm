@@ -331,7 +331,7 @@ function LeadFormDialog({
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                {profiles.filter((p) => p.is_active).map((p) => (
+                {(Array.isArray(profiles) ? profiles : []).filter((p) => p.is_active).map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>
                 ))}
               </SelectContent>

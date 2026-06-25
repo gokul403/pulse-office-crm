@@ -26,13 +26,14 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar() {
-  const { profile, roles, isAdmin, isManager } = useAuth();
+  const { profile, roles, isAdmin } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (p: string) => pathname === p || pathname.startsWith(p + "/");
 
   const workspace = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Tasks", url: "/tasks", icon: CheckSquare },
+    { title: "Team", url: "/team", icon: Users },
   ];
   const crm = [
     { title: "Leads / Enquiries", url: "/leads", icon: Target },
@@ -42,8 +43,7 @@ export function AppSidebar() {
     { title: "Income", url: "/income", icon: TrendingUp },
     { title: "Expenses", url: "/expenses", icon: TrendingDown },
   ];
-  const admin: { title: string; url: string; icon: typeof Users }[] = [];
-  if (isAdmin || isManager) admin.push({ title: "Team", url: "/team", icon: Users });
+  const admin: { title: string; url: string; icon: typeof Settings }[] = [];
   if (isAdmin) admin.push({ title: "Settings", url: "/settings", icon: Settings });
 
   return (

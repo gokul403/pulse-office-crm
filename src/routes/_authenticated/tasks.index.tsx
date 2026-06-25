@@ -370,7 +370,7 @@ function TaskListPage() {
   });
 
   const profilesQ = useQuery({
-    queryKey: ["profiles-map"],
+    queryKey: ["profiles-name-map"],
     queryFn: async () => {
       const data = await api.get<any[]>("/profiles");
       const map = new Map<string, string>();

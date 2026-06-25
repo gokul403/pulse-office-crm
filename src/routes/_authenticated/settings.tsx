@@ -36,7 +36,7 @@ function SettingsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const teamQ = useQuery({
-    queryKey: ["team"],
+    queryKey: ["team", "settings"],
     queryFn: () => api.get<{ profiles: Profile[] }>("/team"),
     enabled: isAdmin,
   });

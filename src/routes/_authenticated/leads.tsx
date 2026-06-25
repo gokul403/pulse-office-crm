@@ -60,7 +60,8 @@ function LeadsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
-  const canCreate = isAdmin || isManager;
+  const canCreate = !!user;
+  const canDelete = isAdmin || isManager;
 
   const leadsQ = useQuery({
     queryKey: ["leads"],
@@ -223,7 +224,7 @@ function LeadsPage() {
                     {format(new Date(l.created_at), "MMM d, yyyy")}
                   </TableCell>
                   <TableCell>
-                    {canCreate && (
+                    {canDelete && (
                       <Button
                         size="icon"
                         variant="ghost"

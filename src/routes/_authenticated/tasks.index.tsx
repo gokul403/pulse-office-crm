@@ -412,7 +412,7 @@ function TaskListPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
           <p className="text-sm text-muted-foreground">
-            {(isAdmin || isManager) ? "Track every task across the team." : "Everything assigned to you."}
+            Track every task across the team.
           </p>
         </div>
         {(isAdmin || isManager) && (

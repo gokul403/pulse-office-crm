@@ -38,13 +38,10 @@ export function AppSidebar() {
     { title: "Leads / Enquiries", url: "/leads", icon: Target },
     { title: "Customers", url: "/customers", icon: UserSquare2 },
   ];
-  const finance =
-    isAdmin || isManager
-      ? [
-          { title: "Income", url: "/income", icon: TrendingUp },
-          { title: "Expenses", url: "/expenses", icon: TrendingDown },
-        ]
-      : [];
+  const finance = [
+    { title: "Income", url: "/income", icon: TrendingUp },
+    { title: "Expenses", url: "/expenses", icon: TrendingDown },
+  ];
   const admin: { title: string; url: string; icon: typeof Users }[] = [];
   if (isAdmin || isManager) admin.push({ title: "Team", url: "/team", icon: Users });
   if (isAdmin) admin.push({ title: "Settings", url: "/settings", icon: Settings });

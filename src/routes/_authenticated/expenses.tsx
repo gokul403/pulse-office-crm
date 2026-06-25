@@ -39,9 +39,10 @@ type Expense = {
 const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "INR" });
 
 function ExpensesPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const canCreate = isAdmin || isManager;
 
   const q = useQuery({
     queryKey: ["expenses"],
@@ -83,18 +84,20 @@ function ExpensesPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Expenses</h1>
           <p className="text-sm text-muted-foreground">Track every outgoing cost.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-1 h-4 w-4" /> New expense</Button>
-          </DialogTrigger>
-          <ExpenseFormDialog
-            profiles={profilesQ.data ?? []}
-            onDone={() => {
-              setOpen(false);
-              qc.invalidateQueries({ queryKey: ["expenses"] });
-            }}
-          />
-        </Dialog>
+        {canCreate && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-1 h-4 w-4" /> New expense</Button>
+            </DialogTrigger>
+            <ExpenseFormDialog
+              profiles={profilesQ.data ?? []}
+              onDone={() => {
+                setOpen(false);
+                qc.invalidateQueries({ queryKey: ["expenses"] });
+              }}
+            />
+          </Dialog>
+        )}
       </div>
 
       <Card>

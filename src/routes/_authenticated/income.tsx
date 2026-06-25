@@ -39,9 +39,10 @@ type IncomeRow = {
 const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "INR" });
 
 function IncomePage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const canCreate = isAdmin || isManager;
 
   const q = useQuery({
     queryKey: ["income"],
@@ -83,18 +84,20 @@ function IncomePage() {
           <h1 className="text-2xl font-semibold tracking-tight">Income</h1>
           <p className="text-sm text-muted-foreground">All revenue received, by date.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-1 h-4 w-4" /> New income</Button>
-          </DialogTrigger>
-          <IncomeFormDialog
-            customers={custQ.data ?? []}
-            onDone={() => {
-              setOpen(false);
-              qc.invalidateQueries({ queryKey: ["income"] });
-            }}
-          />
-        </Dialog>
+        {canCreate && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-1 h-4 w-4" /> New income</Button>
+            </DialogTrigger>
+            <IncomeFormDialog
+              customers={custQ.data ?? []}
+              onDone={() => {
+                setOpen(false);
+                qc.invalidateQueries({ queryKey: ["income"] });
+              }}
+            />
+          </Dialog>
+        )}
       </div>
 
       <Card>

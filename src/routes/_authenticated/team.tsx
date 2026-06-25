@@ -16,6 +16,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import { Copy, Loader2, UserPlus } from "lucide-react";
@@ -37,10 +39,139 @@ type CreatedCredentials = {
   temporaryPassword: string;
 };
 
+// ── Edit modal ────────────────────────────────────────────────────────────────
+
+type EditMemberModalProps = {
+  profile: Profile;
+  currentRole: string;
+  managers: Profile[];
+  onClose: () => void;
+  onSaved: () => void;
+};
+
+function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: EditMemberModalProps) {
+  const [fullName, setFullName] = useState(profile.full_name ?? "");
+  const [jobTitle, setJobTitle] = useState(profile.job_title ?? "");
+  const [role, setRole] = useState(currentRole);
+  const [isActive, setIsActive] = useState(profile.is_active);
+  const [saving, setSaving] = useState(false);
+
+  const roleChanged = role !== currentRole;
+  const activeChanged = isActive !== profile.is_active;
+  const profileChanged =
+    fullName !== (profile.full_name ?? "") ||
+    jobTitle !== (profile.job_title ?? "");
+
+  const isDirty = roleChanged || activeChanged || profileChanged;
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const requests: Promise<unknown>[] = [];
+
+      if (profileChanged) {
+        requests.push(
+          api.post(`/team/update-member/${profile.id}`, {
+            fullName: fullName || undefined,
+            jobTitle: jobTitle || undefined,
+          })
+        );
+      }
+
+      if (roleChanged) {
+        requests.push(api.post("/team/role", { userId: profile.id, role }));
+      }
+
+      if (activeChanged) {
+        requests.push(api.post("/team/active", { userId: profile.id, active: isActive }));
+      }
+
+      await Promise.all(requests);
+      toast.success("Member updated");
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not save changes");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit member</DialogTitle>
+          <DialogDescription>{profile.email}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Full name</Label>
+            <Input
+              id="edit-name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Jane Smith"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-title">Job title</Label>
+            <Input
+              id="edit-title"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="Account Executive"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Role</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="employee">Employee</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Account status</Label>
+              <p className="text-xs text-muted-foreground">
+                {isActive ? "User can sign in." : "User is blocked from signing in."}
+              </p>
+            </div>
+            <Switch checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!isDirty || saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 function TeamPage() {
   const { isAdmin, isManager } = useAuth();
   const qc = useQueryClient();
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<CreatedCredentials | null>(null);
@@ -50,6 +181,9 @@ function TeamPage() {
   const [jobTitle, setJobTitle] = useState("");
   const [role, setRole] = useState<"manager" | "employee">("employee");
   const [managerId, setManagerId] = useState("");
+
+  const [editProfile, setEditProfile] = useState<Profile | null>(null);
+  const [editRole, setEditRole] = useState<string>("");
 
   const dataQ = useQuery({
     queryKey: ["team"],
@@ -73,6 +207,12 @@ function TeamPage() {
     setJobTitle("");
     setRole("employee");
     setManagerId("");
+  }
+
+  function openEdit(profile: Profile) {
+    if (!isAdmin) return;
+    setEditProfile(profile);
+    setEditRole(dataQ.data?.roleMap.get(profile.id) ?? "employee");
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -130,7 +270,7 @@ function TeamPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">
-            {isAdmin ? "Manage roles and access for everyone." : "View your team."}
+            {isAdmin ? "Click a row to edit a member's details." : "View your team."}
           </p>
         </div>
         {isAdmin && (
@@ -151,74 +291,35 @@ function TeamPage() {
                 <TableHead>Job title</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {(dataQ.data?.profiles ?? []).map((p) => {
                 const memberRole = dataQ.data?.roleMap.get(p.id) ?? "employee";
                 return (
-                  <TableRow key={p.id}>
+                  <TableRow
+                    key={p.id}
+                    onClick={() => openEdit(p)}
+                    className={isAdmin ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+                  >
                     <TableCell className="font-medium">{p.full_name ?? "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
                     <TableCell className="text-sm">{p.job_title ?? "—"}</TableCell>
                     <TableCell>
-                      {isAdmin ? (
-                        <Select
-                          value={memberRole}
-                          onValueChange={async (v) => {
-                            setBusyId(p.id);
-                            try {
-                              await api.post("/team/role", { userId: p.id, role: v });
-                              qc.invalidateQueries({ queryKey: ["team"] });
-                              toast.success("Role updated");
-                            } catch (e: any) {
-                              toast.error(e.message);
-                            } finally {
-                              setBusyId(null);
-                            }
-                          }}
-                          disabled={busyId === p.id}
-                        >
-                          <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="employee">Employee</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge variant="outline" className="capitalize">{memberRole}</Badge>
-                      )}
+                      <Badge variant="outline" className="capitalize">{memberRole}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={p.is_active ? "bg-success/10 text-success border-success/30" : "bg-muted text-muted-foreground"}>
+                      <Badge
+                        variant="outline"
+                        className={
+                          p.is_active
+                            ? "bg-success/10 text-success border-success/30"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
                         {p.is_active ? "Active" : "Disabled"}
                       </Badge>
                     </TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            setBusyId(p.id);
-                            try {
-                              await api.post("/team/active", { userId: p.id, active: !p.is_active });
-                              qc.invalidateQueries({ queryKey: ["team"] });
-                              toast.success(p.is_active ? "User disabled" : "User activated");
-                            } catch (e: any) {
-                              toast.error(e.message);
-                            } finally {
-                              setBusyId(null);
-                            }
-                          }}
-                          disabled={busyId === p.id}
-                        >
-                          {p.is_active ? "Disable" : "Enable"}
-                        </Button>
-                      </TableCell>
-                    )}
                   </TableRow>
                 );
               })}
@@ -226,6 +327,20 @@ function TeamPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {editProfile && (
+        <EditMemberModal
+          profile={editProfile}
+          currentRole={editRole}
+          managers={managers}
+          onClose={() => setEditProfile(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["team"] });
+            qc.invalidateQueries({ queryKey: ["profiles"] });
+            qc.invalidateQueries({ queryKey: ["assignable-people"] });
+          }}
+        />
+      )}
 
       <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="sm:max-w-md">

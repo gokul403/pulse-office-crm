@@ -23,7 +23,7 @@ class ApiClient {
       }
       throw new Error(message);
     }
-    
+
     // For 204 No Content or empty responses, return empty object/null safely
     if (response.status === 204) {
       return null as any;
@@ -56,6 +56,15 @@ class ApiClient {
   async put<T>(path: string, body?: any): Promise<T> {
     const response = await fetch(`${BASE_URL}${path}`, {
       method: "PUT",
+      headers: this.getHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return this.handleResponse<T>(response);
+  }
+
+  async patch<T>(path: string, body?: any): Promise<T> {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: "PATCH",
       headers: this.getHeaders(),
       body: body ? JSON.stringify(body) : undefined,
     });

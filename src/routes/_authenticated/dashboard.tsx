@@ -13,6 +13,7 @@ import {
   UserCog,
   TrendingUp,
   CalendarClock,
+  Briefcase,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -27,7 +28,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { format, isBefore } from "date-fns";
+import { format, isBefore, getHours } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -60,6 +61,95 @@ function priorityColor(p: TaskRow["priority"]) {
   }[p];
 }
 
+function getGreeting() {
+  const hour = getHours(new Date());
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
+function getFirstName(profile: any) {
+  if (profile?.full_name) return profile.full_name.split(" ")[0];
+  if (profile?.email) return profile.email.split("@")[0];
+  return "there";
+}
+
+function WelcomeBanner({
+  profile,
+  isAdmin,
+  isManager,
+  pendingCount,
+  overdueCount,
+}: {
+  profile: any;
+  isAdmin: boolean;
+  isManager: boolean;
+  pendingCount: number;
+  overdueCount: number;
+}) {
+  const greeting = getGreeting();
+  const firstName = getFirstName(profile);
+
+  const subtitle = isAdmin
+    ? "You have full visibility across the organization. Here's today's snapshot."
+    : overdueCount > 0
+    ? `You have ${overdueCount} overdue task${overdueCount > 1 ? "s" : ""}. Let's get them sorted.`
+    : pendingCount > 0
+    ? `You have ${pendingCount} pending task${pendingCount > 1 ? "s" : ""}. Let's make progress today.`
+    : "All caught up! No pending tasks right now.";
+
+  // We only show the micro overdue card in the banner if they are an employee and have overdue items
+  const showOverdueBadge = !isAdmin && !isManager && overdueCount > 0;
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-blue-600 p-6 shadow-lg">
+      {/* Decorative blobs */}
+      <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-8 right-24 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
+
+      {/* Prominent Overdue Card - Increased size individually */}
+      {showOverdueBadge && (
+        <div className="absolute top-4 right-4 flex items-center gap-4 rounded-xl border border-white/20 bg-white/15 p-10 backdrop-blur-md shadow-md min-w-[180px] animate-pulse">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-white/80">Overdue</p>
+            <p className="text-4xl font-extrabold leading-none text-white tabular-nums mt-1">{overdueCount}</p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/25 text-red-200 shadow-inner">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+        </div>
+      )}
+
+      <div className="relative flex items-center justify-between gap-6">
+        {/* Left: text content (added right padding on desktop to shield layout from enlarged card) */}
+        <div className="flex flex-col gap-3 sm:pr-36">
+          <div>
+            <p className="text-sm font-medium text-white/70 tracking-wide uppercase">
+              {format(new Date(), "EEEE, MMMM d")}
+            </p>
+            <h2 className="mt-1 text-3xl font-bold text-white tracking-tight">
+              {greeting}, {firstName}
+            </h2>
+            <p className="mt-1.5 text-sm text-white/80 max-w-md leading-relaxed">
+              {subtitle}
+            </p>
+          </div>
+
+          {/* Job title pill at the bottom */}
+          {profile?.job_title && (
+            <div className="mt-1 inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3.5 py-1.5 backdrop-blur-sm">
+              <Briefcase className="h-3.5 w-3.5 text-white/80" />
+              <span className="text-xs font-semibold text-white tracking-wide">
+                {profile.job_title}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardPage() {
   const { user, isAdmin, isManager, profile } = useAuth();
 
@@ -87,7 +177,10 @@ function DashboardPage() {
     inProgress: tasks.filter((t) => t.status === "in_progress").length,
     completed: tasks.filter((t) => t.status === "completed").length,
     overdue: tasks.filter(
-      (t) => t.status !== "completed" && t.due_date && isBefore(new Date(t.due_date), now),
+      (t) =>
+        t.status !== "completed" &&
+        t.due_date &&
+        isBefore(new Date(t.due_date), now),
     ).length,
   };
 
@@ -96,14 +189,24 @@ function DashboardPage() {
   const managerCount =
     teamQ.data?.roles.filter((r: any) => r.role === "manager").length ?? 0;
 
-  const priorityChart = (["low", "medium", "high", "critical"] as const).map((p) => ({
-    name: p,
-    value: tasks.filter((t) => t.priority === p).length,
-  }));
+  const priorityChart = (["low", "medium", "high", "critical"] as const).map(
+    (p) => ({
+      name: p,
+      value: tasks.filter((t) => t.priority === p).length,
+    }),
+  );
   const statusChart = [
     { name: "Pending", value: counts.pending, color: "hsl(var(--chart-3))" },
-    { name: "In progress", value: counts.inProgress, color: "hsl(var(--chart-1))" },
-    { name: "Completed", value: counts.completed, color: "hsl(var(--chart-2))" },
+    {
+      name: "In progress",
+      value: counts.inProgress,
+      color: "hsl(var(--chart-1))",
+    },
+    {
+      name: "Completed",
+      value: counts.completed,
+      color: "hsl(var(--chart-2))",
+    },
     { name: "Overdue", value: counts.overdue, color: "hsl(var(--chart-4))" },
   ];
   const PIE_COLORS = ["#F59E0B", "#2563EB", "#22C55E", "#EF4444"];
@@ -114,29 +217,68 @@ function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isAdmin ? "Admin overview" : isManager ? "Team overview" : "My dashboard"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {format(now, "EEEE, MMMM d")} · Signed in as {profile?.email}
-        </p>
-      </div>
+      {/* Welcome banner */}
+      <WelcomeBanner
+        profile={profile}
+        isAdmin={isAdmin}
+        isManager={isManager}
+        pendingCount={counts.pending}
+        overdueCount={counts.overdue}
+      />
 
+      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {(isAdmin || isManager) && (
           <>
-            <StatCard label="Employees" value={employeeCount} icon={Users} hint="Active workforce" />
-            <StatCard label="Managers" value={managerCount} icon={UserCog} hint="Leadership" />
+            <StatCard
+              label="Employees"
+              value={employeeCount}
+              icon={Users}
+              hint="Active workforce"
+            />
+            <StatCard
+              label="Managers"
+              value={managerCount}
+              icon={UserCog}
+              hint="Leadership"
+            />
           </>
         )}
-        <StatCard label={isAdmin || isManager ? "All tasks" : "My tasks"} value={counts.total} icon={CheckSquare} />
-        <StatCard label="In progress" value={counts.inProgress} icon={TrendingUp} accent="primary" />
-        <StatCard label="Pending" value={counts.pending} icon={Clock} accent="warning" />
-        <StatCard label="Completed" value={counts.completed} icon={CheckCircle2} accent="success" />
-        <StatCard label="Overdue" value={counts.overdue} icon={AlertTriangle} accent="danger" />
+        <StatCard
+          label={isAdmin || isManager ? "All tasks" : "My tasks"}
+          value={counts.total}
+          icon={CheckSquare}
+        />
+        <StatCard
+          label="In progress"
+          value={counts.inProgress}
+          icon={TrendingUp}
+          accent="primary"
+        />
+        <StatCard
+          label="Pending"
+          value={counts.pending}
+          icon={Clock}
+          accent="warning"
+        />
+        <StatCard
+          label="Completed"
+          value={counts.completed}
+          icon={CheckCircle2}
+          accent="success"
+        />
+        {/* Only show the full Overdue card here for Admin and Managers */}
+        {(isAdmin || isManager) && (
+          <StatCard
+            label="Overdue"
+            value={counts.overdue}
+            icon={AlertTriangle}
+            accent="danger"
+          />
+        )}
       </div>
 
+      {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -145,9 +287,22 @@ function DashboardPage() {
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={priorityChart}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} className="text-xs" />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} className="text-xs" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border)"
+                />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-xs"
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-xs"
+                />
                 <Tooltip
                   contentStyle={{
                     background: "var(--popover)",
@@ -168,7 +323,13 @@ function DashboardPage() {
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={statusChart} dataKey="value" nameKey="name" outerRadius={90} innerRadius={50}>
+                <Pie
+                  data={statusChart}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={90}
+                  innerRadius={50}
+                >
                   {statusChart.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i]} />
                   ))}
@@ -187,6 +348,7 @@ function DashboardPage() {
         </Card>
       </div>
 
+      {/* Upcoming tasks */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
@@ -195,19 +357,30 @@ function DashboardPage() {
         </CardHeader>
         <CardContent>
           {upcoming.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No upcoming tasks. Enjoy the calm.</p>
+            <p className="text-sm text-muted-foreground">
+              No upcoming tasks. Enjoy the calm.
+            </p>
           ) : (
             <ul className="divide-y">
               {upcoming.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 py-3">
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 py-3"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{t.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      Due {t.due_date ? format(new Date(t.due_date), "MMM d, yyyy") : "—"}
+                      Due{" "}
+                      {t.due_date
+                        ? format(new Date(t.due_date), "MMM d, yyyy")
+                        : "—"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={priorityColor(t.priority)}>
+                    <Badge
+                      variant="outline"
+                      className={priorityColor(t.priority)}
+                    >
                       {t.priority}
                     </Badge>
                     <Badge variant="outline" className={statColor(t.status)}>
@@ -248,11 +421,19 @@ function StatCard({
       <CardContent className="p-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              {label}
+            </p>
             <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
-            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+            {hint && (
+              <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+            )}
           </div>
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${accent ? tone[accent] : "bg-muted text-muted-foreground"}`}>
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+              accent ? tone[accent] : "bg-muted text-muted-foreground"
+            }`}
+          >
             <Icon className="h-5 w-5" />
           </div>
         </div>

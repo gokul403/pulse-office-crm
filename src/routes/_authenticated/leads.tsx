@@ -18,7 +18,12 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Search, Trash2 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Plus, Search, Trash2, ChevronLeft, Calendar as CalendarIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -60,6 +65,7 @@ function LeadsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const canCreate = !!user;
   const canDelete = isAdmin || isManager;
 
@@ -131,18 +137,23 @@ function LeadsPage() {
           </p>
         </div>
         {canCreate && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="mr-1 h-4 w-4" /> New lead</Button>
-            </DialogTrigger>
-            <LeadFormDialog
-              profiles={profilesQ.data ?? []}
-              onDone={() => {
-                setOpen(false);
-                qc.invalidateQueries({ queryKey: ["leads"] });
-              }}
-            />
-          </Dialog>
+          <div className="flex gap-2">
+            <Button onClick={() => { setEditingLead(null); setOpen(true); }}>
+              <Plus className="mr-1 h-4 w-4" /> New lead
+            </Button>
+            <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingLead(null); }}>
+              <LeadFormDialog
+                key={editingLead?.id || "new"}
+                lead={editingLead}
+                profiles={profilesQ.data ?? []}
+                onDone={() => {
+                  setOpen(false);
+                  setEditingLead(null);
+                  qc.invalidateQueries({ queryKey: ["leads"] });
+                }}
+              />
+            </Dialog>
+          </div>
         )}
       </div>
 
@@ -194,7 +205,11 @@ function LeadsPage() {
                 <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No leads yet.</TableCell></TableRow>
               )}
               {filtered.map((l) => (
-                <TableRow key={l.id}>
+                <TableRow key={l.id}
+                  onClick={() => {
+                    setEditingLead(l);
+                    setOpen(true);
+                  }}>
                   <TableCell className="font-medium">{l.name}</TableCell>
                   <TableCell className="text-sm">{l.company ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -246,30 +261,95 @@ function LeadsPage() {
   );
 }
 
+function formatLocalDatetime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
 function LeadFormDialog({
+  lead,
   profiles,
   onDone,
 }: {
+  lead?: Lead | null;
   profiles: any[];
   onDone: () => void;
 }) {
+  const { user } = useAuth();
+
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    source: "",
-    notes: "",
-    assigned_to: "unassigned",
-    status: "new" as LeadStatus,
+    name: lead?.name || "",
+    email: lead?.email || "",
+    phone: lead?.phone || "",
+    company: lead?.company || "",
+    source: lead?.source || "",
+    notes: lead?.notes || "",
+    assigned_to: lead ? (lead.assigned_to || "unassigned") : (user?.id || "unassigned"),
+    status: lead?.status || ("new" as LeadStatus),
+    interested_product: lead?.interested_product || "",
+    possibility: lead?.possibility || "",
+    followup_date: lead?.followup_date ? formatLocalDatetime(lead.followup_date) : "",
+    expected_revenue: lead?.expected_revenue != null ? String(lead.expected_revenue) : "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerStep, setPickerStep] = useState<"date" | "time">("date");
+  const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
+  const [tempHour, setTempHour] = useState("09");
+  const [tempMinute, setTempMinute] = useState("00");
+  const [tempAmPm, setTempAmPm] = useState("AM");
+
+  const initPicker = () => {
+    setPickerStep("date");
+    if (form.followup_date) {
+      const d = new Date(form.followup_date);
+      if (!isNaN(d.getTime())) {
+        setTempDate(d);
+        let h = d.getHours();
+        const ampm = h >= 12 ? "PM" : "AM";
+        h = h % 12;
+        if (h === 0) h = 12;
+        setTempHour(String(h).padStart(2, "0"));
+        setTempMinute(String(d.getMinutes()).padStart(2, "0"));
+        setTempAmPm(ampm);
+        return;
+      }
+    }
+    setTempDate(undefined);
+    setTempHour("09");
+    setTempMinute("00");
+    setTempAmPm("AM");
+  };
+
+  function combineDateTime(date: Date | undefined, hour: string, minute: string, ampm: string): string {
+    if (!date) return "";
+    const d = new Date(date);
+    let h = parseInt(hour, 10);
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    d.setHours(h, parseInt(minute, 10), 0, 0);
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post("/leads", {
+      const payload = {
         name: form.name.trim(),
         email: form.email || null,
         phone: form.phone || null,
@@ -278,11 +358,22 @@ function LeadFormDialog({
         notes: form.notes || null,
         status: form.status,
         assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
-      });
-      toast.success("Lead created");
+        interested_product: form.interested_product || null,
+        possibility: form.possibility || null,
+        followup_date: form.followup_date ? new Date(form.followup_date).toISOString() : null,
+        expected_revenue: form.expected_revenue ? parseFloat(form.expected_revenue) : null,
+      };
+
+      if (lead) {
+        await api.put(`/leads/${lead.id}`, payload);
+        toast.success("Lead updated");
+      } else {
+        await api.post("/leads", payload);
+        toast.success("Lead created");
+      }
       onDone();
     } catch (err: any) {
-      toast.error(err.message ?? "Could not create lead");
+      toast.error(err.message ?? (lead ? "Could not update lead" : "Could not create lead"));
     } finally {
       setSubmitting(false);
     }
@@ -291,8 +382,10 @@ function LeadFormDialog({
   return (
     <DialogContent className="max-w-lg">
       <DialogHeader>
-        <DialogTitle>New lead</DialogTitle>
-        <DialogDescription>Capture a new enquiry or opportunity.</DialogDescription>
+        <DialogTitle>{lead ? "Edit lead" : "New lead"}</DialogTitle>
+        <DialogDescription>
+          {lead ? "Modify lead details and preferences." : "Capture a new enquiry or opportunity."}
+        </DialogDescription>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
@@ -337,14 +430,171 @@ function LeadFormDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-1.5">
+            <Label>Interested Product</Label>
+            <Select
+              value={form.interested_product || undefined}
+              onValueChange={(v) => setForm({ ...form, interested_product: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Product" />
+              </SelectTrigger>
+              <SelectContent>
+                {["LMS", "HRMS", "Therapy", "Custom Product"].map((prod) => (
+                  <SelectItem key={prod} value={prod}>{prod}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Possibility</Label>
+            <Select
+              value={form.possibility || undefined}
+              onValueChange={(v) => setForm({ ...form, possibility: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Possibility" />
+              </SelectTrigger>
+              <SelectContent>
+                {["High", "Medium", "Low"].map((poss) => (
+                  <SelectItem key={poss} value={poss}>{poss}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="lnotes">Notes</Label>
-            <Textarea id="lnotes" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Textarea id="lnotes" placeholder="Add details or logs about the initial call/enquiry…" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+
+          <div className="space-y-1.5 flex flex-col justify-end">
+            <Label>Follow-up Date & Time</Label>
+            <Popover open={pickerOpen} onOpenChange={(open) => { setPickerOpen(open); if (open) initPicker(); }}>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" className="w-full justify-start text-left font-normal h-9 bg-background border-input hover:bg-accent/50 text-foreground">
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {form.followup_date ? (
+                    format(new Date(form.followup_date), "MMM d, yyyy h:mm a")
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Select date & time</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                {pickerStep === "date" ? (
+                  <Calendar
+                    mode="single"
+                    selected={tempDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setTempDate(date);
+                      }
+                      setPickerStep("time");
+                    }}
+                    initialFocus
+                  />) : (
+                  <div className="p-3 w-[260px] bg-background">
+                    <style>{`
+                      .hide-scrollbar::-webkit-scrollbar {
+                        display: none;
+                      }
+                    `}</style>
+                    <div className="flex items-center gap-2 border-b pb-2 mb-2">
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPickerStep("date")}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="font-semibold text-sm">Select Time</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Hour column */}
+                      <div
+                        className="flex flex-col gap-1 border rounded-md p-1 h-40 overflow-y-auto scroll-smooth hide-scrollbar"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        onWheel={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                      >
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center font-bold pb-1 border-b bg-background sticky top-0">Hour</div>
+                        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((h) => (
+                          <button
+                            key={h}
+                            type="button"
+                            className={cn(
+                              "text-xs py-1 rounded transition-colors text-center font-medium shrink-0",
+                              tempHour === h ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-muted"
+                            )}
+                            onClick={() => setTempHour(h)}
+                          >
+                            {h}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Minute column */}
+                      <div
+                        className="flex flex-col gap-1 border rounded-md p-1 h-40 overflow-y-auto scroll-smooth hide-scrollbar"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        onWheel={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                      >
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center font-bold pb-1 border-b bg-background sticky top-0">Min</div>
+                        {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            className={cn(
+                              "text-xs py-1 rounded transition-colors text-center font-medium shrink-0",
+                              tempMinute === m ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-muted"
+                            )}
+                            onClick={() => setTempMinute(m)}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                      {/* AM/PM column */}
+                      <div className="flex flex-col gap-1 border rounded-md p-1 h-40">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground text-center font-bold pb-1 border-b bg-background sticky top-0">Period</div>
+                        {["AM", "PM"].map((p) => (
+                          <button
+                            key={p}
+                            type="button"
+                            className={cn(
+                              "text-xs py-2 rounded transition-colors text-center font-medium shrink-0",
+                              tempAmPm === p ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-muted"
+                            )}
+                            onClick={() => setTempAmPm(p)}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full mt-3 h-8 text-xs font-semibold"
+                      onClick={() => {
+                        const final = combineDateTime(tempDate, tempHour, tempMinute, tempAmPm);
+                        setForm({ ...form, followup_date: final });
+                        setPickerOpen(false);
+                      }}
+                    >
+                      Confirm Time
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ler">Expected Revenue (INR)</Label>
+            <Input id="ler" type="number" min="0" placeholder="e.g. 50000" value={form.expected_revenue} onChange={(e) => setForm({ ...form, expected_revenue: e.target.value })} />
           </div>
         </div>
         <DialogFooter>
           <Button type="submit" disabled={submitting || !form.name.trim()}>
-            {submitting ? "Saving…" : "Create lead"}
+            {submitting ? "Saving…" : lead ? "Update lead" : "Create lead"}
           </Button>
         </DialogFooter>
       </form>

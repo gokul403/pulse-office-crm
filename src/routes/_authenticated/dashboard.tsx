@@ -169,7 +169,8 @@ function DashboardPage() {
     enabled: isAdmin || isManager,
   });
 
-  const tasks = tasksQ.data ?? [];
+  const allTasks = tasksQ.data ?? [];
+  const tasks = allTasks.filter((t) => t.assigned_to === user?.id);
   const now = new Date();
   const counts = {
     total: tasks.length,
@@ -245,7 +246,7 @@ function DashboardPage() {
           </>
         )}
         <StatCard
-          label={isAdmin || isManager ? "All tasks" : "My tasks"}
+          label="My tasks"
           value={counts.total}
           icon={CheckSquare}
         />

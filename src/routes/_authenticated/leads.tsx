@@ -44,6 +44,10 @@ type Lead = {
   status: LeadStatus;
   notes: string | null;
   assigned_to: string | null;
+  interested_product: string | null;
+  possibility: string | null;
+  followup_date: string | null;
+  expected_revenue: number | null;
   created_at: string;
 };
 

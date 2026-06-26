@@ -19,6 +19,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Send, Loader2 } from "lucide-react";
 import { format, isBefore } from "date-fns";
 import { toast } from "sonner";
@@ -359,6 +360,7 @@ function TaskListPage() {
   const { user, isAdmin, isManager } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [tabFilter, setTabFilter] = useState<string>("my");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -393,6 +395,9 @@ function TaskListPage() {
 
   const filtered = useMemo(() => {
     let list = tasksQ.data ?? [];
+    if (tabFilter === "my") {
+      list = list.filter((t) => t.assigned_to === user?.id);
+    }
     if (statusFilter !== "all") list = list.filter((t) => t.status === statusFilter);
     if (priorityFilter !== "all") list = list.filter((t) => t.priority === priorityFilter);
     if (search.trim()) {
@@ -402,7 +407,7 @@ function TaskListPage() {
       );
     }
     return list;
-  }, [tasksQ.data, statusFilter, priorityFilter, search]);
+  }, [tasksQ.data, tabFilter, statusFilter, priorityFilter, search, user?.id]);
 
   const now = new Date();
 
@@ -436,6 +441,12 @@ function TaskListPage() {
                 className="pl-8"
               />
             </div>
+            <Tabs value={tabFilter} onValueChange={setTabFilter} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="my">My Tasks</TabsTrigger>
+                <TabsTrigger value="all">All Tasks</TabsTrigger>
+              </TabsList>
+            </Tabs>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>

@@ -40,7 +40,7 @@ type TaskRow = {
   status: "pending" | "in_progress" | "completed" | "overdue";
   priority: "low" | "medium" | "high" | "critical";
   due_date: string | null;
-  assigned_to: string | null;
+  assignees?: { id: string; full_name: string | null; email: string }[];
 };
 
 function statColor(s: TaskRow["status"]) {
@@ -170,7 +170,7 @@ function DashboardPage() {
   });
 
   const allTasks = tasksQ.data ?? [];
-  const tasks = allTasks.filter((t) => t.assigned_to === user?.id);
+  const tasks = allTasks.filter((t) => t.assignees?.some((a) => a.id === user?.id));
   const now = new Date();
   const counts = {
     total: tasks.length,

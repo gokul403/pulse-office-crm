@@ -24,7 +24,7 @@ function NewTaskPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "critical">("medium");
-  const [assignedTo, setAssignedTo] = useState<string>("");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState("");
 
   const peopleQ = useQuery({
@@ -44,7 +44,7 @@ function NewTaskPage() {
         priority,
         status: "pending",
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
-        assigned_to: assignedTo || null,
+        assignee_ids: assigneeIds,
       });
     },
     onSuccess: () => {
@@ -104,15 +104,28 @@ function NewTaskPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Assignee</Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
-                <SelectTrigger><SelectValue placeholder="Choose someone…" /></SelectTrigger>
-                <SelectContent>
-                  {(peopleQ.data ?? []).map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Assignees</Label>
+              <div className="rounded-md border bg-background max-h-[160px] overflow-y-auto p-2.5 space-y-2">
+                {(peopleQ.data ?? []).map((p: any) => {
+                  const isChecked = assigneeIds.includes(p.id);
+                  return (
+                    <label key={p.id} className="flex items-center gap-2.5 text-sm font-normal cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        checked={isChecked}
+                        onChange={() => {
+                          const newIds = isChecked
+                            ? assigneeIds.filter((id) => id !== p.id)
+                            : [...assigneeIds, p.id];
+                          setAssigneeIds(newIds);
+                        }}
+                      />
+                      <span>{p.full_name || p.email}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" asChild>

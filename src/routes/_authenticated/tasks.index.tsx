@@ -35,7 +35,7 @@ type Task = {
   status: "pending" | "in_progress" | "completed" | "overdue";
   priority: "low" | "medium" | "high" | "critical";
   due_date: string | null;
-  assigned_to: string | null;
+  assignees: { id: string; full_name: string | null; email: string }[];
   created_by: string | null;
   created_at: string;
 };
@@ -102,7 +102,7 @@ function TaskModal({
     status: task.status,
     priority: task.priority,
     due_date: task.due_date ? task.due_date.slice(0, 10) : "",
-    assigned_to: task.assigned_to ?? "unassigned",
+    assignee_ids: task.assignees ? task.assignees.map((a) => a.id) : [],
   });
 
   const commentsQ = useQuery({
@@ -145,7 +145,6 @@ function TaskModal({
         ...form,
         description: form.description || null,
         due_date: form.due_date || null,
-        assigned_to: form.assigned_to === "unassigned" ? null : form.assigned_to,
       });
     } finally {
       setSaving(false);
@@ -236,22 +235,29 @@ function TaskModal({
                     onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Assignee</Label>
-                  <Select
-                    value={form.assigned_to}
-                    onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {(profilesQ.data ?? []).map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.full_name || p.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Assignees</Label>
+                  <div className="rounded-md border bg-background max-h-[140px] overflow-y-auto p-2.5 space-y-2">
+                    {(profilesQ.data ?? []).map((p) => {
+                      const isChecked = form.assignee_ids.includes(p.id);
+                      return (
+                        <label key={p.id} className="flex items-center gap-2.5 text-sm font-normal cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={isChecked}
+                            onChange={() => {
+                              const newIds = isChecked
+                                ? form.assignee_ids.filter((id) => id !== p.id)
+                                : [...form.assignee_ids, p.id];
+                              setForm((f) => ({ ...f, assignee_ids: newIds }));
+                            }}
+                          />
+                          <span>{p.full_name || p.email}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
               <Button className="w-full" onClick={handleSave} disabled={saving}>
@@ -279,8 +285,12 @@ function TaskModal({
                   <span>{task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : "—"}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Assignee</span>
-                  <span>{task.assigned_to ? profilesMap.get(task.assigned_to) ?? "—" : "Unassigned"}</span>
+                  <span className="text-muted-foreground">Assignees</span>
+                  <span>
+                    {task.assignees && task.assignees.length > 0
+                      ? task.assignees.map((a) => a.full_name || a.email).join(", ")
+                      : "Unassigned"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -439,20 +449,20 @@ function TaskListPage() {
   const filtered = useMemo(() => {
     let list = tasksQ.data ?? [];
     if (tabFilter === "my") {
-      list = list.filter((t) => t.assigned_to === user?.id);
+      list = list.filter((t) => t.assignees?.some((a) => a.id === user?.id));
     } else {
       if (assigneeFilter !== "all") {
         if (assigneeFilter === "unassigned") {
-          list = list.filter((t) => t.assigned_to === null);
+          list = list.filter((t) => !t.assignees || t.assignees.length === 0);
         } else {
-          list = list.filter((t) => t.assigned_to === assigneeFilter);
+          list = list.filter((t) => t.assignees?.some((a) => a.id === assigneeFilter));
         }
       } else if (teamFilter !== "all") {
         const teamMemberIds = [
           teamFilter,
           ...profilesList.filter((p) => p.manager_id === teamFilter).map((p) => p.id),
         ];
-        list = list.filter((t) => t.assigned_to !== null && teamMemberIds.includes(t.assigned_to));
+        list = list.filter((t) => t.assignees?.some((a) => teamMemberIds.includes(a.id)));
       }
     }
     if (statusFilter !== "all") list = list.filter((t) => t.status === statusFilter);
@@ -606,7 +616,9 @@ function TaskListPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm" onClick={() => setSelectedTask(t)}>
-                      {t.assigned_to ? profilesQ.data?.get(t.assigned_to) ?? "—" : "Unassigned"}
+                      {t.assignees && t.assignees.length > 0
+                        ? t.assignees.map((a) => a.full_name || a.email).join(", ")
+                        : "Unassigned"}
                     </TableCell>
                     <TableCell onClick={() => setSelectedTask(t)}>{priorityBadge(t.priority)}</TableCell>
                     <TableCell onClick={() => setSelectedTask(t)}>

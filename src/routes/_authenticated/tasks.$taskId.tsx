@@ -134,8 +134,12 @@ function TaskDetailPage() {
           </div>
           <div className="sm:col-span-3 grid sm:grid-cols-2 gap-4">
             <div>
-              <p className="mb-1 text-xs uppercase text-muted-foreground">Assignee</p>
-              <p className="text-sm">{t.assigned_to ? peopleMap.get(t.assigned_to) ?? "—" : "Unassigned"}</p>
+              <p className="mb-1 text-xs uppercase text-muted-foreground">Assignees</p>
+              <p className="text-sm">
+                {t.assignees && t.assignees.length > 0
+                  ? t.assignees.map((a: any) => a.full_name || a.email).join(", ")
+                  : "Unassigned"}
+              </p>
             </div>
             <div>
               <p className="mb-1 text-xs uppercase text-muted-foreground">Created</p>

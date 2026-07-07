@@ -365,6 +365,49 @@ function TaskListPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
+  const teamQ = useQuery({
+    queryKey: ["team"],
+    queryFn: async () => {
+      const res = await api.get<{ profiles: any[]; roles: { user_id: string; role: string }[] }>("/team");
+      const roleMap = new Map<string, string>();
+      (res.roles ?? []).forEach((r: any) => roleMap.set(r.user_id, r.role));
+      return { profiles: res.profiles, roleMap };
+    },
+    enabled: !!user,
+  });
+
+  const profilesList = teamQ.data?.profiles ?? [];
+  const roleMap = teamQ.data?.roleMap ?? new Map<string, string>();
+
+  const managers = useMemo(() => {
+    return profilesList.filter((p) => roleMap.get(p.id) === "manager" && p.is_active);
+  }, [profilesList, roleMap]);
+
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+
+  const handleTeamChange = (value: string) => {
+    setTeamFilter(value);
+    if (value !== "all") {
+      const teamMemberIds = [
+        value,
+        ...profilesList.filter((p) => p.manager_id === value).map((p) => p.id),
+      ];
+      if (assigneeFilter !== "all" && assigneeFilter !== "unassigned" && !teamMemberIds.includes(assigneeFilter)) {
+        setAssigneeFilter("all");
+      }
+    }
+  };
+
+  const filteredProfilesForSelect = useMemo(() => {
+    if (teamFilter === "all") {
+      return profilesList.filter((p) => p.is_active);
+    }
+    return profilesList.filter(
+      (p) => p.is_active && (p.id === teamFilter || p.manager_id === teamFilter)
+    );
+  }, [profilesList, teamFilter]);
+
   const tasksQ = useQuery({
     queryKey: ["tasks", user?.id, isAdmin, isManager],
     queryFn: () => api.get<Task[]>("/tasks"),
@@ -397,6 +440,20 @@ function TaskListPage() {
     let list = tasksQ.data ?? [];
     if (tabFilter === "my") {
       list = list.filter((t) => t.assigned_to === user?.id);
+    } else {
+      if (assigneeFilter !== "all") {
+        if (assigneeFilter === "unassigned") {
+          list = list.filter((t) => t.assigned_to === null);
+        } else {
+          list = list.filter((t) => t.assigned_to === assigneeFilter);
+        }
+      } else if (teamFilter !== "all") {
+        const teamMemberIds = [
+          teamFilter,
+          ...profilesList.filter((p) => p.manager_id === teamFilter).map((p) => p.id),
+        ];
+        list = list.filter((t) => t.assigned_to !== null && teamMemberIds.includes(t.assigned_to));
+      }
     }
     if (statusFilter !== "all") list = list.filter((t) => t.status === statusFilter);
     if (priorityFilter !== "all") list = list.filter((t) => t.priority === priorityFilter);
@@ -407,7 +464,17 @@ function TaskListPage() {
       );
     }
     return list;
-  }, [tasksQ.data, tabFilter, statusFilter, priorityFilter, search, user?.id]);
+  }, [
+    tasksQ.data,
+    tabFilter,
+    statusFilter,
+    priorityFilter,
+    search,
+    user?.id,
+    assigneeFilter,
+    teamFilter,
+    profilesList,
+  ]);
 
   const now = new Date();
 
@@ -447,6 +514,41 @@ function TaskListPage() {
                 <TabsTrigger value="all">All Tasks</TabsTrigger>
               </TabsList>
             </Tabs>
+            <Select
+              value={teamFilter}
+              onValueChange={handleTeamChange}
+              disabled={tabFilter === "my"}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {managers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.full_name || m.email}'s Team
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={assigneeFilter}
+              onValueChange={setAssigneeFilter}
+              disabled={tabFilter === "my"}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assignees</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {filteredProfilesForSelect.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.full_name || p.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/tasks/new")({
 });
 
 function NewTaskPage() {
-  const { user, isAdmin, isManager } = useAuth();
+  const { user, isAdmin, isManager, isEmployee } = useAuth();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -54,7 +54,7 @@ function NewTaskPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (!isAdmin && !isManager) {
+  if (!isAdmin && !isManager && !isEmployee) {
     return (
       <Card>
         <CardContent className="p-6">

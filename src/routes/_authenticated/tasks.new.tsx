@@ -26,6 +26,15 @@ function NewTaskPage() {
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "critical">("medium");
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState("");
+  const [projectId, setProjectId] = useState("");
+
+  const projectsQ = useQuery({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const data = await api.get<any[]>("/projects");
+      return data ?? [];
+    },
+  });
 
   const peopleQ = useQuery({
     queryKey: ["assignable-people"],
@@ -45,6 +54,7 @@ function NewTaskPage() {
         status: "pending",
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         assignee_ids: assigneeIds,
+        project_id: projectId || null,
       });
     },
     onSuccess: () => {
@@ -85,6 +95,22 @@ function NewTaskPage() {
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project">Project Tag</Label>
+              <Select value={projectId || "none"} onValueChange={(v) => setProjectId(v === "none" ? "" : v)}>
+                <SelectTrigger id="project">
+                  <SelectValue placeholder="No project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No project</SelectItem>
+                  {(projectsQ.data ?? []).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.project_code}: {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

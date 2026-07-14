@@ -38,6 +38,9 @@ type Task = {
   assignees: { id: string; full_name: string | null; email: string }[];
   created_by: string | null;
   created_at: string;
+  project_id?: string | null;
+  project_name?: string | null;
+  project_code?: string | null;
 };
 
 type Comment = {
@@ -103,6 +106,7 @@ function TaskModal({
     priority: task.priority,
     due_date: task.due_date ? task.due_date.slice(0, 10) : "",
     assignee_ids: task.assignees ? task.assignees.map((a) => a.id) : [],
+    project_id: task.project_id ?? "",
   });
 
   const commentsQ = useQuery({
@@ -114,6 +118,11 @@ function TaskModal({
     queryKey: ["profiles-list"],
     queryFn: () => api.get<{ id: string; full_name: string | null; email: string }[]>("/profiles"),
     enabled: isAdmin,
+  });
+
+  const projectsQ = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api.get<any[]>("/projects"),
   });
 
   const updateTask = useMutation({
@@ -145,6 +154,7 @@ function TaskModal({
         ...form,
         description: form.description || null,
         due_date: form.due_date || null,
+        project_id: form.project_id || null,
       });
     } finally {
       setSaving(false);
@@ -259,6 +269,23 @@ function TaskModal({
                     })}
                   </div>
                 </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="task-project">Project Tag</Label>
+                  <Select
+                    value={form.project_id || "none"}
+                    onValueChange={(v) => setForm((f) => ({ ...f, project_id: v === "none" ? "" : v }))}
+                  >
+                    <SelectTrigger id="task-project"><SelectValue placeholder="No project" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Project</SelectItem>
+                      {(projectsQ.data ?? []).map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.project_code}: {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button className="w-full" onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -272,6 +299,14 @@ function TaskModal({
                 <p className="text-muted-foreground leading-relaxed">{task.description}</p>
               )}
               <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {task.project_name && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Project</span>
+                    <Badge variant="secondary" className="px-1.5 py-0.5 text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                      {task.project_code}: {task.project_name}
+                    </Badge>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Status</span>
                   {isOverdue ? statusBadge("overdue") : statusBadge(task.status)}
@@ -610,10 +645,19 @@ function TaskListPage() {
                 return (
                   <TableRow key={t.id} className="cursor-pointer hover:bg-muted/40">
                     <TableCell onClick={() => setSelectedTask(t)}>
-                      <span className="font-medium hover:underline">{t.title}</span>
-                      {t.description && (
-                        <p className="line-clamp-1 text-xs text-muted-foreground">{t.description}</p>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium hover:underline">{t.title}</span>
+                          {t.project_name && (
+                            <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-800 hover:bg-violet-100/80 dark:bg-violet-900/30 dark:text-violet-300">
+                              {t.project_code}: {t.project_name}
+                            </Badge>
+                          )}
+                        </div>
+                        {t.description && (
+                          <p className="line-clamp-1 text-xs text-muted-foreground">{t.description}</p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm" onClick={() => setSelectedTask(t)}>
                       {t.assignees && t.assignees.length > 0

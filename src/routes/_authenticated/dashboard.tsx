@@ -41,6 +41,9 @@ type TaskRow = {
   priority: "low" | "medium" | "high" | "critical";
   due_date: string | null;
   assignees?: { id: string; full_name: string | null; email: string }[];
+  project_id?: string | null;
+  project_name?: string | null;
+  project_code?: string | null;
 };
 
 function statColor(s: TaskRow["status"]) {
@@ -368,9 +371,16 @@ function DashboardPage() {
                   key={t.id}
                   className="flex items-center justify-between gap-3 py-3"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{t.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium">{t.title}</p>
+                      {t.project_name && (
+                        <Badge variant="secondary" className="px-1.5 py-0.2 text-[9px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                          {t.project_code}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Due{" "}
                       {t.due_date
                         ? format(new Date(t.due_date), "MMM d, yyyy")

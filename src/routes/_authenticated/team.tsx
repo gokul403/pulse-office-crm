@@ -31,6 +31,7 @@ type Profile = {
   email: string;
   full_name: string | null;
   job_title: string | null;
+  phone: string | null;
   is_active: boolean;
 };
 
@@ -52,6 +53,7 @@ type EditMemberModalProps = {
 function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: EditMemberModalProps) {
   const [fullName, setFullName] = useState(profile.full_name ?? "");
   const [jobTitle, setJobTitle] = useState(profile.job_title ?? "");
+  const [phone, setPhone] = useState(profile.phone ?? "");
   const [role, setRole] = useState(currentRole);
   const [isActive, setIsActive] = useState(profile.is_active);
   const [saving, setSaving] = useState(false);
@@ -60,7 +62,8 @@ function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: E
   const activeChanged = isActive !== profile.is_active;
   const profileChanged =
     fullName !== (profile.full_name ?? "") ||
-    jobTitle !== (profile.job_title ?? "");
+    jobTitle !== (profile.job_title ?? "") ||
+    phone !== (profile.phone ?? "");
 
   const isDirty = roleChanged || activeChanged || profileChanged;
 
@@ -74,6 +77,7 @@ function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: E
           api.post(`/team/update-member/${profile.id}`, {
             fullName: fullName || undefined,
             jobTitle: jobTitle || undefined,
+            phone: phone || undefined,
           })
         );
       }
@@ -123,6 +127,17 @@ function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: E
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
               placeholder="Account Executive"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-phone">Phone (WhatsApp)</Label>
+            <Input
+              id="edit-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+91XXXXXXXXXX"
             />
           </div>
 
@@ -179,6 +194,7 @@ function TeamPage() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"manager" | "employee">("employee");
   const [managerId, setManagerId] = useState("");
 
@@ -205,6 +221,7 @@ function TeamPage() {
     setEmail("");
     setFullName("");
     setJobTitle("");
+    setPhone("");
     setRole("employee");
     setManagerId("");
   }
@@ -231,6 +248,7 @@ function TeamPage() {
         email,
         fullName,
         jobTitle: jobTitle || undefined,
+        phone: phone || undefined,
         role,
         managerId: role === "employee" ? managerId : undefined,
       });
@@ -288,6 +306,7 @@ function TeamPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Job title</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
@@ -304,6 +323,7 @@ function TeamPage() {
                   >
                     <TableCell className="font-medium">{p.full_name ?? "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
+                    <TableCell className="text-sm">{p.phone ?? "—"}</TableCell>
                     <TableCell className="text-sm">{p.job_title ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">{memberRole}</Badge>
@@ -379,6 +399,16 @@ function TeamPage() {
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
                 placeholder="Account Executive"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="member-phone">Phone (WhatsApp)</Label>
+              <Input
+                id="member-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91XXXXXXXXXX"
               />
             </div>
             <div className="space-y-2">

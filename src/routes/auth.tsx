@@ -103,9 +103,9 @@ function AuthPage() {
   }
 
   const cardMeta = {
-    "sign-in":      { title: "Sign in",            description: "Improving productivity and collaboration across the organization." },
-    "reset-verify": { title: "Reset password",      description: "Enter your email and current password to verify your identity." },
-    "reset-new":    { title: "Choose new password", description: "Pick a strong password you haven't used before." },
+    "sign-in": { title: "Sign in", description: "Improving productivity and collaboration across the organization." },
+    "reset-verify": { title: "Reset password", description: "Enter your email and current password to verify your identity." },
+    "reset-new": { title: "Choose new password", description: "Pick a strong password you haven't used before." },
   };
 
   return (
@@ -145,7 +145,7 @@ function AuthPage() {
           </p>
         </div>
 
-        <div className="relative z-10 text-xs text-slate-400">© Techxcore OfficeFlow CRM</div>
+        <div className="relative z-10 text-xs text-slate-400">© Cybricode OfficeFlow CRM</div>
       </div>
 
       {/* Right panel */}

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2, Briefcase, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -122,10 +122,12 @@ function AuthPage() {
         </div>
         <div className="absolute inset-0 z-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
 
-        <div className="relative z-10 flex items-center gap-2 text-lg font-semibold tracking-wide">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
-            <Briefcase className="h-5 w-5 text-primary-foreground" />
-          </div>
+        <div className="relative z-10 flex items-center gap-3 text-lg font-semibold tracking-wide">
+          <img
+            src="/Cybricodelogo.png"
+            alt="Cybricode logo"
+            className="h-10 w-auto object-contain drop-shadow-md"
+          />
           <span className="text-xl font-bold tracking-tight">OfficeFlow</span>
         </div>
 

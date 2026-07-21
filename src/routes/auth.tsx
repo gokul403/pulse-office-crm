@@ -111,20 +111,41 @@ function AuthPage() {
   return (
     <div className="grid min-h-screen md:grid-cols-2">
       {/* Left panel */}
-      <div className="hidden flex-col justify-between bg-gradient-to-br from-primary to-primary/70 p-12 text-primary-foreground md:flex">
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <Briefcase className="h-6 w-6" />
-          OfficeFlow
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-900 via-primary/95 to-slate-950 p-12 text-primary-foreground md:flex">
+        {/* Background Image / Overlay */}
+        <div className="absolute inset-0 z-0 opacity-25 mix-blend-overlay">
+          <img
+            src="/auth-hero.png"
+            alt="OfficeFlow Workspace backdrop"
+            className="h-full w-full object-cover object-center scale-105"
+          />
         </div>
-        <div>
-          <h1 className="text-4xl font-bold leading-tight">
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+
+        <div className="relative z-10 flex items-center gap-2 text-lg font-semibold tracking-wide">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+            <Briefcase className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <span className="text-xl font-bold tracking-tight">OfficeFlow</span>
+        </div>
+
+        <div className="relative z-10 my-auto py-6">
+          <div className="mb-6 overflow-hidden rounded-2xl border border-white/15 bg-white/10 p-2 backdrop-blur-md shadow-2xl transition-all duration-300 hover:border-white/30 hover:bg-white/15">
+            <img
+              src="/auth-hero.png"
+              alt="OfficeFlow AI Workspace"
+              className="h-60 w-full rounded-xl object-cover object-center shadow-md"
+            />
+          </div>
+          <h1 className="text-3xl font-bold leading-tight tracking-tight text-white drop-shadow-sm">
             Run your entire office<br />from one workspace.
           </h1>
-          <p className="mt-4 max-w-md text-primary-foreground/80">
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-200/90">
             Tasks, CRM, finance and team performance — with role-based access for admins, managers, and employees.
           </p>
         </div>
-        <div className="text-xs text-primary-foreground/70">© Techxcore OfficeFlow CRM</div>
+
+        <div className="relative z-10 text-xs text-slate-400">© Techxcore OfficeFlow CRM</div>
       </div>
 
       {/* Right panel */}

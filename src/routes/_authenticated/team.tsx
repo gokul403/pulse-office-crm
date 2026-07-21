@@ -51,6 +51,7 @@ type EditMemberModalProps = {
 };
 
 function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: EditMemberModalProps) {
+  const [email, setEmail] = useState(profile.email ?? "");
   const [fullName, setFullName] = useState(profile.full_name ?? "");
   const [jobTitle, setJobTitle] = useState(profile.job_title ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
@@ -61,6 +62,7 @@ function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: E
   const roleChanged = role !== currentRole;
   const activeChanged = isActive !== profile.is_active;
   const profileChanged =
+    email.trim().toLowerCase() !== (profile.email ?? "").toLowerCase() ||
     fullName !== (profile.full_name ?? "") ||
     jobTitle !== (profile.job_title ?? "") ||
     phone !== (profile.phone ?? "");
@@ -75,6 +77,7 @@ function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: E
       if (profileChanged) {
         requests.push(
           api.post(`/team/update-member/${profile.id}`, {
+            email: email.trim() || undefined,
             fullName: fullName || undefined,
             jobTitle: jobTitle || undefined,
             phone: phone || undefined,
@@ -106,10 +109,21 @@ function EditMemberModal({ profile, currentRole, managers, onClose, onSaved }: E
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit member</DialogTitle>
-          <DialogDescription>{profile.email}</DialogDescription>
+          <DialogDescription>Update team member profile and permissions</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="edit-email">Email</Label>
+            <Input
+              id="edit-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="edit-name">Full name</Label>
             <Input

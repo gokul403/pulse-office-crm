@@ -33,7 +33,7 @@ type Leave = {
   employee_email: string | null;
   start_date: string;
   end_date: string;
-  leave_type: "annual" | "sick" | "unpaid" | "other";
+  leave_type: "annual" | "sick" | "unpaid" | "wfh" | "other";
   reason: string | null;
   status: "pending" | "approved" | "rejected";
   reviewer_name: string | null;
@@ -99,6 +99,7 @@ function LeavesPage() {
       annual: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
       sick: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
       unpaid: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+      wfh: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
       other: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300",
     };
     return <Badge className={`capitalize ${maps[type]}`}>{type}</Badge>;
@@ -198,6 +199,7 @@ function LeavesPage() {
                   <SelectItem value="annual">Annual Leave</SelectItem>
                   <SelectItem value="sick">Sick Leave</SelectItem>
                   <SelectItem value="unpaid">Unpaid Leave</SelectItem>
+                  <SelectItem value="wfh">Work From Home</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>

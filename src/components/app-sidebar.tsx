@@ -12,6 +12,8 @@ import {
   TrendingDown,
   Kanban,
   ClipboardList,
+  CalendarDays,
+  CalendarCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,9 +31,11 @@ import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar() {
   const { profile, roles, isAdmin } = useAuth();
+  const isManagerOrAdmin = roles.includes("admin") || roles.includes("manager");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (p: string) => {
     if (p === "/issues") return pathname === "/issues";
+    if (p === "/leaves") return pathname === "/leaves";
     return pathname === p || pathname.startsWith(p + "/");
   };
 
@@ -40,6 +44,8 @@ export function AppSidebar() {
     { title: "Tasks", url: "/tasks", icon: CheckSquare },
     { title: "Issues", url: "/issues", icon: ClipboardList },
     { title: "Issue Board", url: "/issues/board", icon: Kanban },
+    { title: "My Leaves", url: "/leaves", icon: CalendarDays },
+    ...(isManagerOrAdmin ? [{ title: "Leave Approvals", url: "/leaves/approvals", icon: CalendarCheck }] : []),
     { title: "Team", url: "/team", icon: Users },
   ];
   const crm = [

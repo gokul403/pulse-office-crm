@@ -28,6 +28,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 export function AppSidebar() {
   const { profile, roles, isAdmin } = useAuth();
@@ -38,6 +40,15 @@ export function AppSidebar() {
     if (p === "/leaves") return pathname === "/leaves";
     return pathname === p || pathname.startsWith(p + "/");
   };
+
+  const leavesQ = useQuery<any[]>({
+    queryKey: ["leaves-all"],
+    queryFn: () => api.get("/leaves?filter=all"),
+    enabled: isManagerOrAdmin,
+    refetchInterval: 15000,
+  });
+
+  const pendingLeavesCount = leavesQ.data?.filter((l) => l.status === "pending").length || 0;
 
   const workspace = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -88,9 +99,14 @@ export function AppSidebar() {
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                      <Link to={item.url}>
+                      <Link to={item.url} className="flex w-full items-center">
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {item.url === "/leaves/approvals" && pendingLeavesCount > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1.5 leading-none">
+                            {pendingLeavesCount}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

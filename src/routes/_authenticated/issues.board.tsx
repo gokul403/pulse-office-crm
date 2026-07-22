@@ -317,7 +317,7 @@ function IssueBoardPage() {
                 className="flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm min-h-[500px]"
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between border-b p-3">
+                <div className={`flex items-center justify-between border-b p-3 rounded-t-xl ${col.color}`}>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm">{col.label}</span>
                     <Badge variant="secondary" className="px-2 py-0.5 text-xs font-normal">

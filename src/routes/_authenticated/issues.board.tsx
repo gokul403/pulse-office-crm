@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
+import { IssueComments } from "@/components/issue-comments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -400,7 +401,7 @@ function IssueBoardPage() {
 
       {/* Edit / Detail Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[450px] md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Issue</DialogTitle>
           </DialogHeader>
@@ -502,7 +503,12 @@ function IssueBoardPage() {
               </Select>
             </div>
 
-            <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+            {/* Issue Comments Feed */}
+            {selectedIssue && (
+              <IssueComments issueId={selectedIssue.id} />
+            )}
+
+            <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between pt-2">
               <Button
                 type="button"
                 variant="destructive"

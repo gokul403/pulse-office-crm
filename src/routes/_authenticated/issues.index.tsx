@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
+import { IssueComments } from "@/components/issue-comments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ function IssuesListPage() {
   const [priority, setPriority] = useState<Issue["priority"]>("medium");
   const [assignedTo, setAssignedTo] = useState<string>("unassigned");
   const [projectId, setProjectId] = useState<string>("");
+  const [initialComment, setInitialComment] = useState("");
 
   // Load Issues
   const issuesQ = useQuery({
@@ -134,6 +136,7 @@ function IssuesListPage() {
         priority,
         assigned_to: assignedTo === "unassigned" ? null : assignedTo,
         project_id: projectId,
+        initial_comment: initialComment,
       });
     },
     onSuccess: () => {
@@ -198,6 +201,7 @@ function IssuesListPage() {
     setPriority("medium");
     setAssignedTo("unassigned");
     setProjectId("");
+    setInitialComment("");
   };
 
   const openCreateDialog = () => {
@@ -214,21 +218,6 @@ function IssuesListPage() {
     setAssignedTo(issue.assigned_to || "unassigned");
     setProjectId(issue.project_id || "");
     setEditOpen(true);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("Image size must be less than 2MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const filteredIssues = (issuesQ.data ?? []).filter((issue) => {
@@ -607,6 +596,19 @@ function IssuesListPage() {
               </Select>
             </div>
             
+            {/* Initial Comment Box */}
+            <div className="space-y-2">
+              <Label htmlFor="create-initial-comment">Initial Comment</Label>
+              <Textarea
+                id="create-initial-comment"
+                rows={2}
+                value={initialComment}
+                onChange={(e) => setInitialComment(e.target.value)}
+                placeholder="Write an optional first comment or update..."
+                className="text-xs"
+              />
+            </div>
+            
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancel
@@ -621,7 +623,7 @@ function IssuesListPage() {
 
       {/* Edit / Detail Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[450px] md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Issue</DialogTitle>
           </DialogHeader>
@@ -723,7 +725,12 @@ function IssuesListPage() {
               </Select>
             </div>
 
-            <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+            {/* Issue Comments Feed (Only if issue is created/selected) */}
+            {selectedIssue && (
+              <IssueComments issueId={selectedIssue.id} />
+            )}
+
+            <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between pt-2">
               <Button
                 type="button"
                 variant="destructive"

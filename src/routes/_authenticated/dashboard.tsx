@@ -14,6 +14,7 @@ import {
   TrendingUp,
   CalendarClock,
   Briefcase,
+  Kanban,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -46,6 +47,16 @@ type TaskRow = {
   project_code?: string | null;
 };
 
+type IssueRow = {
+  id: string;
+  title: string;
+  status: "backlog" | "todo" | "in_progress" | "done";
+  priority: "low" | "medium" | "high" | "critical";
+  assigned_to: string | null;
+  assignee_name?: string | null;
+  created_at: string;
+};
+
 function statColor(s: TaskRow["status"]) {
   return {
     pending: "bg-warning/15 text-warning-foreground border-warning/30",
@@ -55,7 +66,16 @@ function statColor(s: TaskRow["status"]) {
   }[s];
 }
 
-function priorityColor(p: TaskRow["priority"]) {
+function issueStatusColor(s: IssueRow["status"]) {
+  return {
+    backlog: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+    todo: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+    in_progress: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    done: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  }[s];
+}
+
+function priorityColor(p: TaskRow["priority"] | IssueRow["priority"]) {
   return {
     low: "bg-muted text-muted-foreground",
     medium: "bg-primary/10 text-primary",
@@ -164,6 +184,14 @@ function DashboardPage() {
     enabled: !!user,
   });
 
+  const issuesQ = useQuery({
+    queryKey: ["dashboard-issues", user?.id],
+    queryFn: async () => {
+      return api.get<IssueRow[]>("/issues");
+    },
+    enabled: !!user,
+  });
+
   const teamQ = useQuery({
     queryKey: ["dashboard-team"],
     queryFn: async () => {
@@ -187,6 +215,10 @@ function DashboardPage() {
         isBefore(new Date(t.due_date), now),
     ).length,
   };
+
+  const allIssues = issuesQ.data ?? [];
+  const myIssues = allIssues.filter((i) => i.assigned_to === user?.id);
+  const myActiveIssuesCount = myIssues.filter((i) => i.status !== "done").length;
 
   const employeeCount =
     teamQ.data?.roles.filter((r: any) => r.role === "employee").length ?? 0;
@@ -254,19 +286,19 @@ function DashboardPage() {
           icon={CheckSquare}
         />
         <StatCard
-          label="In progress"
-          value={counts.inProgress}
-          icon={TrendingUp}
+          label="My Active Issues"
+          value={myActiveIssuesCount}
+          icon={Kanban}
           accent="primary"
         />
         <StatCard
-          label="Pending"
+          label="Pending tasks"
           value={counts.pending}
           icon={Clock}
           accent="warning"
         />
         <StatCard
-          label="Completed"
+          label="Completed tasks"
           value={counts.completed}
           icon={CheckCircle2}
           accent="success"
@@ -274,7 +306,7 @@ function DashboardPage() {
         {/* Only show the full Overdue card here for Admin and Managers */}
         {(isAdmin || isManager) && (
           <StatCard
-            label="Overdue"
+            label="Overdue tasks"
             value={counts.overdue}
             icon={AlertTriangle}
             accent="danger"
@@ -352,58 +384,104 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {/* Upcoming tasks */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <CalendarClock className="h-4 w-4" /> Upcoming
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {upcoming.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No upcoming tasks. Enjoy the calm.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {upcoming.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium">{t.title}</p>
-                      {t.project_name && (
-                        <Badge variant="secondary" className="px-1.5 py-0.2 text-[9px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
-                          {t.project_code}
-                        </Badge>
-                      )}
+      {/* Lists Grid */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Upcoming tasks */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" /> Upcoming Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No upcoming tasks. Enjoy the calm.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {upcoming.map((t) => (
+                  <li
+                    key={t.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium">{t.title}</p>
+                        {t.project_name && (
+                          <Badge variant="secondary" className="px-1.5 py-0.2 text-[9px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                            {t.project_code}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Due{" "}
+                        {t.due_date
+                          ? format(new Date(t.due_date), "MMM d, yyyy")
+                          : "—"}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Due{" "}
-                      {t.due_date
-                        ? format(new Date(t.due_date), "MMM d, yyyy")
-                        : "—"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={priorityColor(t.priority)}
-                    >
-                      {t.priority}
-                    </Badge>
-                    <Badge variant="outline" className={statColor(t.status)}>
-                      {t.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={priorityColor(t.priority)}
+                      >
+                        {t.priority}
+                      </Badge>
+                      <Badge variant="outline" className={statColor(t.status)}>
+                        {t.status.replace("_", " ")}
+                      </Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Assigned Issues */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Kanban className="h-4 w-4" /> My Assigned Issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {myIssues.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No issues assigned to you.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {myIssues.slice(0, 6).map((i) => (
+                  <li
+                    key={i.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{i.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Created {format(new Date(i.created_at), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={priorityColor(i.priority)}
+                      >
+                        {i.priority}
+                      </Badge>
+                      <Badge variant="outline" className={issueStatusColor(i.status)}>
+                        {i.status.replace("_", " ")}
+                      </Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -10,6 +10,8 @@ import {
   UserSquare2,
   TrendingUp,
   TrendingDown,
+  Kanban,
+  ClipboardList,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,11 +30,16 @@ import { useAuth } from "@/hooks/use-auth";
 export function AppSidebar() {
   const { profile, roles, isAdmin } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isActive = (p: string) => pathname === p || pathname.startsWith(p + "/");
+  const isActive = (p: string) => {
+    if (p === "/issues") return pathname === "/issues";
+    return pathname === p || pathname.startsWith(p + "/");
+  };
 
   const workspace = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Tasks", url: "/tasks", icon: CheckSquare },
+    { title: "Issues", url: "/issues", icon: ClipboardList },
+    { title: "Issue Board", url: "/issues/board", icon: Kanban },
     { title: "Team", url: "/team", icon: Users },
   ];
   const crm = [

@@ -339,6 +339,7 @@ function IssuesListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[100px]">ID</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Status</TableHead>
@@ -352,6 +353,9 @@ function IssuesListPage() {
                 <TableBody>
                   {filteredIssues.map((issue) => (
                     <TableRow key={issue.id}>
+                      <TableCell className="font-mono text-xs font-semibold text-muted-foreground">
+                        {issue.issue_key || "—"}
+                      </TableCell>
                       <TableCell className="font-medium max-w-xs md:max-w-md">
                         <div className="flex flex-col min-w-0">
                           <span className="truncate">{issue.title}</span>
@@ -625,7 +629,7 @@ function IssuesListPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-[450px] md:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Issue</DialogTitle>
+            <DialogTitle>Edit Issue {selectedIssue?.issue_key && `(${selectedIssue.issue_key})`}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={(e) => {

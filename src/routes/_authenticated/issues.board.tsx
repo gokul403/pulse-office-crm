@@ -340,8 +340,12 @@ function IssueBoardPage() {
                         {/* Title and Action Button */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex flex-col gap-1 min-w-0">
-                            {issue.project_code && (
-                              <Badge variant="secondary" className="w-fit px-1.5 py-0.2 text-[9px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                            {issue.issue_key ? (
+                              <Badge variant="secondary" className="w-fit px-1.5 py-0.5 text-[9px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                                {issue.issue_key}
+                              </Badge>
+                            ) : issue.project_code && (
+                              <Badge variant="secondary" className="w-fit px-1.5 py-0.5 text-[9px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
                                 {issue.project_code}
                               </Badge>
                             )}
@@ -403,7 +407,7 @@ function IssueBoardPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-[450px] md:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Issue</DialogTitle>
+            <DialogTitle>Edit Issue {selectedIssue?.issue_key && `(${selectedIssue.issue_key})`}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={(e) => {

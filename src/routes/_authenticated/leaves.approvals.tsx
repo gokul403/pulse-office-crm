@@ -31,6 +31,8 @@ type Leave = {
   reviewer_name: string | null;
   actioned_at: string | null;
   created_at: string;
+  is_half_day: boolean;
+  half_day_portion: "first_half" | "second_half" | null;
 };
 
 function LeaveApprovalsPage() {
@@ -164,8 +166,19 @@ function LeaveApprovalsPage() {
                               <TableCell>{getLeaveTypeBadge(leave.leave_type)}</TableCell>
                               <TableCell className="text-xs">
                                 <div>
-                                  {format(new Date(leave.start_date), "MMM d, yyyy")} –{" "}
-                                  {format(new Date(leave.end_date), "MMM d, yyyy")}
+                                  {leave.is_half_day ? (
+                                    <>
+                                      {format(new Date(leave.start_date), "MMM d, yyyy")}
+                                      <span className="ml-1.5 text-[10px] bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-1 py-0.5 rounded capitalize font-medium">
+                                        {leave.half_day_portion === "first_half" ? "First Half" : "Second Half"}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {format(new Date(leave.start_date), "MMM d, yyyy")} –{" "}
+                                      {format(new Date(leave.end_date), "MMM d, yyyy")}
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
@@ -235,8 +248,19 @@ function LeaveApprovalsPage() {
                             </TableCell>
                             <TableCell>{getLeaveTypeBadge(leave.leave_type)}</TableCell>
                             <TableCell className="text-xs">
-                              {format(new Date(leave.start_date), "MMM d, yyyy")} –{" "}
-                              {format(new Date(leave.end_date), "MMM d, yyyy")}
+                              {leave.is_half_day ? (
+                                <>
+                                  {format(new Date(leave.start_date), "MMM d, yyyy")}
+                                  <span className="ml-1.5 text-[10px] bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-1 py-0.5 rounded capitalize font-medium">
+                                    {leave.half_day_portion === "first_half" ? "First Half" : "Second Half"}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  {format(new Date(leave.start_date), "MMM d, yyyy")} –{" "}
+                                  {format(new Date(leave.end_date), "MMM d, yyyy")}
+                                </>
+                              )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
                               {leave.reason || "—"}

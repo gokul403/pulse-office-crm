@@ -39,6 +39,8 @@ type Leave = {
   reviewer_name: string | null;
   actioned_at: string | null;
   created_at: string;
+  is_half_day: boolean;
+  half_day_portion: "first_half" | "second_half" | null;
 };
 
 function LeavesPage() {
@@ -50,6 +52,8 @@ function LeavesPage() {
   const [endDate, setEndDate] = useState("");
   const [leaveType, setLeaveType] = useState<Leave["leave_type"]>("annual");
   const [reason, setReason] = useState("");
+  const [isHalfDay, setIsHalfDay] = useState(false);
+  const [halfDayPortion, setHalfDayPortion] = useState<"first_half" | "second_half">("first_half");
 
   const leavesQ = useQuery<Leave[]>({
     queryKey: ["leaves"],
@@ -74,23 +78,38 @@ function LeavesPage() {
     setEndDate("");
     setLeaveType("annual");
     setReason("");
+    setIsHalfDay(false);
+    setHalfDayPortion("first_half");
   };
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startDate || !endDate || !leaveType) {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const actualEndDate = isHalfDay ? startDate : endDate;
+
+    if (!startDate || !actualEndDate || !leaveType) {
       toast.error("Please fill in all required fields.");
       return;
     }
-    if (new Date(endDate) < new Date(startDate)) {
+    if (startDate < todayStr) {
+      toast.error("Start date must be today or a future date.");
+      return;
+    }
+    if (actualEndDate < todayStr) {
+      toast.error("End date must be today or a future date.");
+      return;
+    }
+    if (new Date(actualEndDate) < new Date(startDate)) {
       toast.error("End date cannot be before start date.");
       return;
     }
     applyMutation.mutate({
       start_date: startDate,
-      end_date: endDate,
+      end_date: actualEndDate,
       leave_type: leaveType,
       reason: reason || null,
+      is_half_day: isHalfDay,
+      half_day_portion: isHalfDay ? halfDayPortion : null,
     });
   };
 
@@ -161,8 +180,19 @@ function LeavesPage() {
                       <TableRow key={leave.id}>
                         <TableCell className="font-semibold">{getLeaveTypeBadge(leave.leave_type)}</TableCell>
                         <TableCell className="text-xs">
-                          {format(new Date(leave.start_date), "MMM d, yyyy")} –{" "}
-                          {format(new Date(leave.end_date), "MMM d, yyyy")}
+                          {leave.is_half_day ? (
+                            <>
+                              {format(new Date(leave.start_date), "MMM d, yyyy")}
+                              <span className="ml-1.5 text-[10px] bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-1 py-0.5 rounded capitalize font-medium">
+                                {leave.half_day_portion === "first_half" ? "First Half" : "Second Half"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {format(new Date(leave.start_date), "MMM d, yyyy")} –{" "}
+                              {format(new Date(leave.end_date), "MMM d, yyyy")}
+                            </>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
                           {leave.reason || "—"}
@@ -205,6 +235,42 @@ function LeavesPage() {
               </Select>
             </div>
 
+            <div className="flex items-center space-x-2 py-1">
+              <input
+                id="is-half-day"
+                type="checkbox"
+                checked={isHalfDay}
+                onChange={(e) => {
+                  setIsHalfDay(e.target.checked);
+                  if (e.target.checked && startDate) {
+                    setEndDate(startDate);
+                  }
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="is-half-day" className="cursor-pointer text-sm font-medium">
+                Apply for Half Day
+              </Label>
+            </div>
+
+            {isHalfDay && (
+              <div className="space-y-2">
+                <Label htmlFor="half-day-portion">Half Day Portion</Label>
+                <Select
+                  value={halfDayPortion}
+                  onValueChange={(val: any) => setHalfDayPortion(val)}
+                >
+                  <SelectTrigger id="half-day-portion">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="first_half">First Half</SelectItem>
+                    <SelectItem value="second_half">Second Half</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start-date">Start Date</Label>
@@ -212,8 +278,14 @@ function LeavesPage() {
                   id="start-date"
                   type="date"
                   required
+                  min={format(new Date(), "yyyy-MM-dd")}
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (isHalfDay) {
+                      setEndDate(e.target.value);
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -221,8 +293,10 @@ function LeavesPage() {
                 <Input
                   id="end-date"
                   type="date"
-                  required
-                  value={endDate}
+                  required={!isHalfDay}
+                  disabled={isHalfDay}
+                  min={startDate || format(new Date(), "yyyy-MM-dd")}
+                  value={isHalfDay ? startDate : endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>

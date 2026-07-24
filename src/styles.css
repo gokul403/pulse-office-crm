@@ -157,3 +157,12 @@
     font-feature-settings: "cv11", "ss01";
   }
 }
+
+/* Hide scrollbar for sidebar navigation */
+[data-sidebar="content"]::-webkit-scrollbar {
+  display: none;
+}
+[data-sidebar="content"] {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

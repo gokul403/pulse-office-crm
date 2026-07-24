@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
-import { Copy, Loader2, UserPlus } from "lucide-react";
+import { Copy, Loader2, UserPlus, Mail, Phone, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/team")({
   component: TeamPage,
@@ -211,6 +211,9 @@ function TeamPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"manager" | "employee">("employee");
   const [managerId, setManagerId] = useState("");
+  
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
 
   const [editProfile, setEditProfile] = useState<Profile | null>(null);
   const [editRole, setEditRole] = useState<string>("");
@@ -230,6 +233,20 @@ function TeamPage() {
     const roleMap = dataQ.data?.roleMap ?? new Map<string, string>();
     return profiles.filter((p) => roleMap.get(p.id) === "manager" && p.is_active);
   }, [dataQ.data]);
+
+  const filteredProfiles = useMemo(() => {
+    const profiles = dataQ.data?.profiles ?? [];
+    const roleMap = dataQ.data?.roleMap ?? new Map<string, string>();
+    return profiles.filter((p) => {
+      const memberRole = roleMap.get(p.id) ?? "employee";
+      const matchesSearch =
+        (p.full_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        p.email.toLowerCase().includes(search.toLowerCase()) ||
+        (p.job_title ?? "").toLowerCase().includes(search.toLowerCase());
+      const matchesRole = roleFilter === "all" || memberRole === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [dataQ.data, search, roleFilter]);
 
   function resetForm() {
     setEmail("");
@@ -292,14 +309,26 @@ function TeamPage() {
     toast.success("Credentials copied");
   }
 
+  const roleGradients: Record<string, string> = {
+    admin: "from-rose-500 via-pink-500 to-red-500",
+    manager: "from-amber-500 via-orange-500 to-yellow-500",
+    employee: "from-indigo-500 via-violet-500 to-purple-500",
+  };
+
+  const roleClasses: Record<string, string> = {
+    admin: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    manager: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    employee: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">
             {isAdmin
-              ? "Click a row to edit a member's details."
+              ? "Manage team member accounts and roles."
               : isManager
                 ? "View your team."
                 : "View all team members."}
@@ -313,54 +342,112 @@ function TeamPage() {
         )}
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Job title</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(dataQ.data?.profiles ?? []).map((p) => {
-                const memberRole = dataQ.data?.roleMap?.get(p.id) ?? "employee";
-                return (
-                  <TableRow
-                    key={p.id}
-                    onClick={isAdmin ? () => openEdit(p) : undefined}
-                    className={isAdmin ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
-                  >
-                    <TableCell className="font-medium">{p.full_name ?? "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
-                    <TableCell className="text-sm">{p.phone ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{p.job_title ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{memberRole}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          p.is_active
-                            ? "bg-success/10 text-success border-success/30"
-                            : "bg-muted text-muted-foreground"
-                        }
-                      >
-                        {p.is_active ? "Active" : "Disabled"}
+      {/* Search & Filter Header */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-card/50 border-border/40 focus-visible:ring-indigo-500/20"
+          />
+        </div>
+        <div className="w-full sm:w-44">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="bg-card/50 border-border/40">
+              <SelectValue placeholder="All Roles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
+              <SelectItem value="employee">Employee</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Cards Grid */}
+      {filteredProfiles.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/60 rounded-2xl bg-card/20 backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground font-semibold">No team members found matching criteria.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProfiles.map((p) => {
+            const memberRole = dataQ.data?.roleMap?.get(p.id) ?? "employee";
+            const initials = p.full_name
+              ? p.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+              : p.email.charAt(0).toUpperCase();
+
+            return (
+              <Card
+                key={p.id}
+                className="group relative flex flex-col justify-between overflow-hidden border border-border/40 bg-card/65 p-6 backdrop-blur-md shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-500/20"
+              >
+                <div className="space-y-4">
+                  {/* Top: Avatar & Meta */}
+                  <div className="flex items-start gap-4">
+                    <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${roleGradients[memberRole] ?? "from-gray-500 to-slate-600"} text-white font-black text-lg shadow-md`}>
+                      {initials}
+                      <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-background ${p.is_active ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <h3 className="truncate font-bold text-foreground text-sm tracking-tight leading-snug group-hover:text-primary transition-colors">
+                          {p.full_name ?? "—"}
+                        </h3>
+                      </div>
+                      <p className="truncate text-xs font-semibold text-muted-foreground mt-0.5">{p.job_title ?? "Team Member"}</p>
+                      
+                      <Badge variant="outline" className={`capitalize px-2 py-0.5 text-[9px] font-bold border mt-1.5 ${roleClasses[memberRole]}`}>
+                        {memberRole}
                       </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    </div>
+                  </div>
+
+                  {/* Middle: Contact details */}
+                  <div className="space-y-2 pt-4 border-t border-border/40 text-xs">
+                    <div className="flex items-center gap-2.5 text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                      <span className="truncate select-all">{p.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      <span className="truncate select-all">{p.phone ?? "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom: Actions */}
+                <div className="flex items-center justify-between gap-3 pt-4 border-t border-border/40/30 mt-4">
+                  <div className="flex items-center gap-1">
+                    {p.phone && (
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0" asChild>
+                        <a href={`https://wa.me/${p.phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer">
+                          <Phone className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-indigo-500/10 hover:text-indigo-500 shrink-0" asChild>
+                      <a href={`mailto:${p.email}`}>
+                        <Mail className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                  {isAdmin && (
+                    <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-500 rounded-lg px-2.5" onClick={() => openEdit(p)}>
+                      Manage
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {editProfile && (
         <EditMemberModal
